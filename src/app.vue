@@ -18,28 +18,21 @@ useSeoMeta({
 		maximumScale: 1,
 		userScalable: 'no'
 	},
-	applicationName: config.name,
-	title: config.name,
-	description: config.description,
-	ogTitle: config.name,
-	author: config.author,
-	creator: config.author,
+	applicationName: config.public.name,
+	title: config.public.name,
+	description: config.public.description,
+	ogTitle: config.public.name,
+	author: config.public.author,
+	creator: config.public.author,
 	ogDescription: config.description,
 	ogLocale: 'en_US',
 	ogType: 'website',
-	ogSiteName: config.name,
-	twitterTitle: config.name,
-	twitterDescription: config.description,
+	ogSiteName: config.public.name,
+	twitterTitle: config.public.name,
+	twitterDescription: config.public.description,
 	twitterCard: 'summary_large_image',
 	mobileWebAppCapable: 'yes',
 	appleMobileWebAppCapable: 'yes',
 	appleMobileWebAppStatusBarStyle: 'black'
-});
-
-// Global Variables
-
-const { fetchUser } = useAuth();
-onMounted(() => {
-	fetchUser();
 });
 </script>

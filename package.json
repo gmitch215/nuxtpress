@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "dev": "bunx nuxthub preview",
     "build": "nuxt build",
     "postinstall": "nuxt prepare",
     "prettier": "bunx prettier --write .",
