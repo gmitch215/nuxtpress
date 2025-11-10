@@ -5,10 +5,16 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineNuxtConfig({
 	runtimeConfig: {
 		public: {
-			name: 'NuxtPress',
-			description: 'My NuxtPress blog',
-			author: 'Gregory Mitchell',
-			themeColor: '#1e40af'
+			name: process.env.NUXT_PUBLIC_NAME || 'NuxtPress',
+			description: process.env.NUXT_PUBLIC_DESCRIPTION || 'My NuxtPress blog',
+			author: process.env.NUXT_PUBLIC_AUTHOR || 'Gregory Mitchell',
+			themeColor: process.env.NUXT_PUBLIC_THEME_COLOR || '#1e40af',
+			favicon: process.env.NUXT_PUBLIC_FAVICON || '/favicon.ico',
+			faviconPng: process.env.NUXT_PUBLIC_FAVICON_PNG || '/favicon.png',
+			github: process.env.NUXT_PUBLIC_GITHUB || '',
+			instagram: process.env.NUXT_PUBLIC_INSTAGRAM || '',
+			twitter: process.env.NUXT_PUBLIC_TWITTER || '',
+			patreon: process.env.NUXT_PUBLIC_PATREON || ''
 		}
 	},
 	ssr: true,
@@ -41,6 +47,7 @@ export default defineNuxtConfig({
 		'nuxt-viewport',
 		'@nuxtjs/robots',
 		'@nuxtjs/sitemap',
+		'@nuxt/image',
 		[
 			'@nuxtjs/google-fonts',
 			{

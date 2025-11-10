@@ -4,7 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "bunx nuxthub preview",
+    "dev": "bunx nuxi dev --no-restart --public --port 8787",
+    "preview": "bunx nuxthub preview",
     "build": "nuxt build",
     "postinstall": "nuxt prepare",
     "prettier": "bunx prettier --write .",
@@ -16,6 +17,7 @@
   },
   "dependencies": {
     "@nuxt/icon": "^2.1.0",
+    "@nuxt/image": "^2.0.0",
     "@nuxt/kit": "^4.2.0",
     "@nuxt/ui": "^4.1.0",
     "@nuxthub/core": "^0.9.0",
