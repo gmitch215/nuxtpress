@@ -1,7 +1,7 @@
 <template>
 	<div
 		id="navbar"
-		class="border-b-2 border-b-black p-4 flex items-center"
+		class="border-b-2 border-b-black p-4 flex items-center bg-accented/60"
 	>
 		<div class="flex items-center justify-center mr-16">
 			<NuxtLink to="/">
