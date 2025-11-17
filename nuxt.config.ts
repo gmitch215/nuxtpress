@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineNuxtConfig({
 	runtimeConfig: {
+		password: process.env.NUXT_PASSWORD || 'password',
 		public: {
 			name: process.env.NUXT_PUBLIC_NAME || 'NuxtPress',
 			description: process.env.NUXT_PUBLIC_DESCRIPTION || 'My NuxtPress blog',
@@ -19,7 +20,7 @@ export default defineNuxtConfig({
 	},
 	ssr: true,
 	compatibilityDate: '2025-06-20',
-	devtools: { enabled: true },
+	devtools: { enabled: process.env.NODE_ENV === 'development' },
 	srcDir: 'src',
 	serverDir: 'src/server',
 	css: ['~/assets/css/main.css'],

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "bunx nuxi dev --no-restart --public --port 8787",
+    "dev:test": "bunx nuxi dev --no-restart --public --port 8788 --dotenv .config/test.env",
     "preview": "bunx nuxthub preview",
     "build": "nuxt build",
     "postinstall": "nuxt prepare",
@@ -27,6 +28,7 @@
     "nuxt-viewport": "^2.3.1"
   },
   "devDependencies": {
+    "@iconify-json/cib": "^1.2.3",
     "@nuxtjs/google-fonts": "^3.2.0",
     "@types/bun": "latest",
     "husky": "^9.1.7",
