@@ -127,10 +127,6 @@ export function useSettings() {
 		}
 	};
 
-	if (import.meta.server) {
-		initSettings();
-	}
-
 	onMounted(async () => {
 		await initSettings();
 	});

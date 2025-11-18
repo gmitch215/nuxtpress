@@ -8,7 +8,6 @@
 </template>
 
 <script setup lang="ts">
-import { type BlogPostProps } from '@nuxt/ui';
 import type { BlogPost } from '~/shared/types';
 
 const props = defineProps<{
@@ -35,7 +34,7 @@ const displayed = computed(() =>
 		const month = date.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
 		const day = date.getDate(); // getDate() returns day of month
 
-		const display: BlogPostProps = {
+		const display = {
 			title: post.title,
 			description:
 				post.content?.slice(0, 100) + (post.content && post.content.length > 100 ? '...' : ''),

@@ -3,6 +3,9 @@ import { defineNuxtConfig } from 'nuxt/config';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineNuxtConfig({
+	site: {
+		url: process.env.NUXT_PUBLIC_SITE_URL || 'https://nuxtpress.pages.dev'
+	},
 	runtimeConfig: {
 		password: process.env.NUXT_PASSWORD || 'password',
 		public: {
@@ -39,7 +42,11 @@ export default defineNuxtConfig({
 			nodeCompat: true
 		},
 		prerender: {
-			routes: ['/sitemap.xml']
+			routes: ['/sitemap.xml'],
+			ignore: ['/api/**']
+		},
+		routeRules: {
+			'/api/**': { prerender: false, cors: true }
 		}
 	},
 	modules: [
