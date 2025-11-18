@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "bunx nuxi dev --no-restart --public --port 8787",
-    "dev:test": "bunx nuxi dev --no-restart --public --port 8788 --dotenv .config/test.env",
+    "dev:test": "bunx nuxi dev --no-restart --public --port 8787 --dotenv .config/test.env",
     "preview": "bunx nuxthub preview",
     "build": "nuxt build",
     "postinstall": "nuxt prepare",
@@ -24,11 +24,17 @@
     "@nuxthub/core": "^0.9.0",
     "@nuxtjs/robots": "^5.5.6",
     "@nuxtjs/sitemap": "^7.4.7",
+    "@types/luxon": "^3.7.1",
+    "luxon": "^3.7.2",
     "nuxt": "^4.2.0",
-    "nuxt-viewport": "^2.3.1"
+    "nuxt-viewport": "^2.3.1",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@iconify-json/cib": "^1.2.3",
+    "@iconify-json/lucide": "^1.2.73",
+    "@iconify-json/material-symbols": "^1.2.46",
+    "@iconify-json/mdi": "^1.2.3",
     "@nuxtjs/google-fonts": "^3.2.0",
     "@types/bun": "latest",
     "husky": "^9.1.7",
