@@ -4,8 +4,7 @@
 			<div class="flex flex-col items-center justify-center min-h-screen">
 				<UIcon
 					name="mdi:alert-circle"
-					class="text-red-500"
-					size="xl"
+					class="text-red-500 size-12 md:size-14 lg:size-16"
 				/>
 				<h1 class="text-4xl font-bold mb-4">Oops! Something went wrong.</h1>
 				<p class="text-lg mb-8">
