@@ -26,7 +26,7 @@ export default defineNuxtConfig({
 	devtools: { enabled: process.env.NODE_ENV === 'development' },
 	srcDir: 'src',
 	serverDir: 'src/server',
-	css: ['~/assets/css/main.css'],
+	css: ['~/assets/css/main.css', '~/assets/css/prose.scss'],
 	vite: {
 		plugins: [tailwindcss()]
 	},
@@ -46,7 +46,9 @@ export default defineNuxtConfig({
 			ignore: ['/api/**']
 		},
 		routeRules: {
-			'/api/**': { prerender: false, cors: true }
+			'/api/**': { prerender: false, cors: true },
+			'/favicon.png': { headers: { 'Cache-Control': 'public, max-age=31536000' } },
+			'/favicon.ico': { headers: { 'Cache-Control': 'public, max-age=31536000' } }
 		}
 	},
 	modules: [
@@ -74,5 +76,12 @@ export default defineNuxtConfig({
 				}
 			}
 		]
-	]
+	],
+	routeRules: {
+		'/_ipx/**': {
+			headers: {
+				'Cache-Control': 'public, max-age=31536000, immutable'
+			}
+		}
+	}
 });

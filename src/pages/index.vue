@@ -74,7 +74,7 @@
 		v-if="loggedIn"
 		v-model:open="newPostOpen"
 		title="Create New Blog Post"
-		class="min-w-140"
+		class="max-w-[90vw] w-full"
 	>
 		<template #body>
 			<BlogForm
@@ -105,6 +105,7 @@
 <script setup lang="ts">
 const { posts, fetchPosts } = useBlogPosts();
 const { loggedIn } = useLogin();
+const { fetchSettings } = useSettings();
 
 const loginOpen = ref(false);
 const newPostOpen = ref(false);
@@ -119,6 +120,10 @@ async function refreshPosts() {
 
 onMounted(async () => {
 	await fetchPosts();
+	// Prefetch settings to avoid delay when opening settings modal
+	if (loggedIn.value) {
+		fetchSettings().catch(() => {});
+	}
 });
 
 const years = computed(() => {

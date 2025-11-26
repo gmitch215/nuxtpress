@@ -6,7 +6,12 @@
 		<div class="space-y-6">
 			<header class="space-y-4">
 				<div class="flex items-center">
-					<h1 class="text-4xl font-bold">{{ post.title }}</h1>
+					<h1
+						class="text-4xl font-bold border-l-6 -ml-5 pl-3"
+						:style="`border-color: ${settings.themeColor || $config.public.themeColor}`"
+					>
+						{{ post.title }}
+					</h1>
 					<ClientOnly>
 						<UButton
 							v-if="loggedIn"
@@ -52,9 +57,12 @@
 				/>
 			</div>
 
-			<div class="prose prose-lg dark:prose-invert max-w-none">
-				<div class="whitespace-pre-wrap">{{ post.content }}</div>
-			</div>
+			<ClientOnly>
+				<div
+					class="prose prose-lg dark:prose-invert max-w-none"
+					v-html="renderedContent"
+				/>
+			</ClientOnly>
 			<footer class="pt-8 border-t border-gray-200 dark:border-gray-800">
 				<div class="text-sm text-gray-500 dark:text-gray-400">
 					Last updated: {{ formatDate(post.updated_at) }}
@@ -65,12 +73,13 @@
 	<UModal
 		v-model:open="editorOpen"
 		title="Edit Blog Post"
-		class="min-w-140"
+		class="max-w-[90vw] w-full"
 	>
 		<template #body>
 			<BlogForm
 				:initial-data="post || undefined"
 				mode="edit"
+				@cancel="editorOpen = false"
 				@submit="
 					editorOpen = false;
 					$router.go(0); // refresh the page to show updated post
@@ -81,8 +90,10 @@
 </template>
 
 <script setup lang="ts">
+import DOMPurify from 'dompurify';
 import type { BlogPost } from '~/shared/types';
 
+const { settings } = useSettings();
 const { loggedIn } = useLogin();
 const editorOpen = ref(false);
 
@@ -165,6 +176,20 @@ const thumbnailUrl = computed(() => {
 		return URL.createObjectURL(new Blob([array]));
 	}
 	return null;
+});
+
+const renderedContent = computed(() => {
+	if (!post.value?.content) return '';
+	if (import.meta.server) return ''; // Don't render on server - only client-side with DOMPurify
+
+	try {
+		const { renderMarkdown } = useMarkdown();
+		const html = renderMarkdown(post.value.content);
+		return DOMPurify.sanitize(html);
+	} catch (e) {
+		console.error('Markdown rendering error:', e);
+		return '<p class="text-red-500">Error rendering content</p>';
+	}
 });
 
 const formatDate = (date: Date) => {
