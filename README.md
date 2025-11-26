@@ -83,8 +83,8 @@ These can be configured via environment variables or through the admin panel aft
 | `NUXT_PUBLIC_DESCRIPTION` | Blog description      | `My NuxtPress blog` |
 | `NUXT_PUBLIC_AUTHOR`      | Author name           | `Gregory Mitchell`  |
 | `NUXT_PUBLIC_THEME_COLOR` | Theme color (hex)     | `#1e40af`           |
-| `NUXT_PUBLIC_FAVICON`     | Favicon URL           | `/favicon.ico`      |
-| `NUXT_PUBLIC_FAVICON_PNG` | PNG favicon URL       | `/favicon.png`      |
+| `NUXT_PUBLIC_FAVICON`     | Favicon URL           | `/_favicon.ico`     |
+| `NUXT_PUBLIC_FAVICON_PNG` | PNG favicon URL       | `/_favicon.png`     |
 | `NUXT_PUBLIC_GITHUB`      | GitHub profile URL    | _(empty)_           |
 | `NUXT_PUBLIC_INSTAGRAM`   | Instagram profile URL | _(empty)_           |
 | `NUXT_PUBLIC_TWITTER`     | Twitter/X profile URL | _(empty)_           |
