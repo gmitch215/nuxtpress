@@ -2,15 +2,13 @@ function timingSafeEqual(a: string, b: string): boolean {
 	const aBuffer = Buffer.from(a, 'utf-8');
 	const bBuffer = Buffer.from(b, 'utf-8');
 
-	const timingSafeEqual = (crypto.subtle as any).timingSafeEqual || (crypto as any).timingSafeEqual;
-
 	if (aBuffer.length !== bBuffer.length) {
 		const fakeBuffer = Buffer.alloc(aBuffer.length);
-		timingSafeEqual(aBuffer, fakeBuffer);
+		(crypto.subtle as any).timingSafeEqual(aBuffer, fakeBuffer);
 		return false;
 	}
 
-	return timingSafeEqual(aBuffer, bBuffer);
+	return (crypto.subtle as any).timingSafeEqual(aBuffer, bBuffer);
 }
 
 export default defineEventHandler(async (event) => {
