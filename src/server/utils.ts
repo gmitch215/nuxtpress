@@ -12,6 +12,7 @@ export async function ensureLoggedIn(event: H3Event) {
 	const kv = hubKV();
 	const token = getCookie(event, 'admin');
 	const ip = getRequestIP(event);
+	const sessionId = ip || getCookie(event, 'admin_session_id');
 
 	if (!token) {
 		throw createError({
@@ -20,7 +21,14 @@ export async function ensureLoggedIn(event: H3Event) {
 		});
 	}
 
-	const storedToken = await kv.get(`nuxtpress:admin_session:${ip}`);
+	if (!sessionId) {
+		throw createError({
+			statusCode: 400,
+			statusMessage: 'Unable to identify client'
+		});
+	}
+
+	const storedToken = await kv.get(`nuxtpress:admin_session:${sessionId}`);
 	if (storedToken !== token) {
 		throw createError({
 			statusCode: 403,
