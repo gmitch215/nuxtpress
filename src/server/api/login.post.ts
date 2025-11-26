@@ -1,11 +1,12 @@
 function timingSafeEqual(a: string, b: string): boolean {
-	const aBuffer = Buffer.from(a, 'utf-8');
-	const bBuffer = Buffer.from(b, 'utf-8');
+	const encoder = new TextEncoder();
+	const aBuffer = encoder.encode(a);
+	const bBuffer = encoder.encode(b);
 
 	// CF Workers
 	if ('timingSafeEqual' in crypto.subtle) {
 		if (aBuffer.length !== bBuffer.length) {
-			const fakeBuffer = Buffer.alloc(aBuffer.length);
+			const fakeBuffer = new Uint8Array(aBuffer.length);
 			(crypto.subtle as any).timingSafeEqual(aBuffer, fakeBuffer);
 			return false;
 		}
@@ -16,8 +17,9 @@ function timingSafeEqual(a: string, b: string): boolean {
 	// Node.js
 	if ('timingSafeEqual' in crypto) {
 		if (aBuffer.length !== bBuffer.length) {
-			const fakeBuffer = Buffer.alloc(aBuffer.length);
-			return !crypto.timingSafeEqual(aBuffer, fakeBuffer);
+			const fakeBuffer = new Uint8Array(aBuffer.length);
+			crypto.timingSafeEqual(aBuffer, fakeBuffer);
+			return false;
 		}
 		return crypto.timingSafeEqual(aBuffer, bBuffer);
 	}
