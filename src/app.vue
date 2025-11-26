@@ -36,6 +36,7 @@ useSeoMeta({
 	ogDescription: settings.value.description || config.public.description,
 	ogLocale: 'en_US',
 	ogType: 'website',
+	themeColor: settings.value.themeColor || config.public.themeColor || '#ffffff',
 	ogSiteName: settings.value.name || config.public.name,
 	twitterTitle: settings.value.name || config.public.name,
 	twitterDescription: settings.value.description || config.public.description,

@@ -1,7 +1,7 @@
 <template>
 	<div
 		id="navbar"
-		class="border-b-2 border-b-black p-4 flex items-center bg-accented/60"
+		class="border-b-2 border-b-black p-4 flex items-center bg-accented/60 light:bg-accented"
 	>
 		<div class="flex items-center justify-center w-full px-2">
 			<NuxtLink to="/">
@@ -24,7 +24,10 @@
 				}}</span>
 			</div>
 			<div class="ml-auto">
-				<div class="flex space-x-4">
+				<div
+					class="flex space-x-4 light:opacity-70"
+					:style="`color: ${settings.themeColor || $config.public.themeColor || '#ffffff'}`"
+				>
 					<NuxtLink
 						v-if="settings.github || $config.public.github"
 						:to="`https://github.com/${settings.github || $config.public.github}`"
