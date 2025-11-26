@@ -1,5 +1,15 @@
 <template>
+	<div
+		v-if="initialLoading"
+		class="flex items-center justify-center p-8"
+	>
+		<div class="flex flex-col items-center gap-2">
+			<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+			<p class="text-sm text-gray-600">Loading settings...</p>
+		</div>
+	</div>
 	<UForm
+		v-else
 		:schema="settingsSchema"
 		:state="state"
 		class="space-y-4"
@@ -165,7 +175,6 @@
 				<UFormField
 					label="GitHub"
 					name="github"
-					help="Username or full URL"
 				>
 					<UInput
 						v-model="state.github"
@@ -174,12 +183,27 @@
 						:disabled="loading"
 						icon="mdi:github"
 					/>
+
+					<template #help>
+						<span>
+							Username or full URL
+							<template v-if="githubUrl">
+								•
+								<NuxtLink
+									:to="githubUrl"
+									target="_blank"
+									class="text-blue-600 hover:underline"
+								>
+									{{ githubUrl }}
+								</NuxtLink>
+							</template>
+						</span>
+					</template>
 				</UFormField>
 
 				<UFormField
 					label="Twitter/X"
 					name="twitter"
-					help="Username or full URL"
 				>
 					<UInput
 						v-model="state.twitter"
@@ -188,12 +212,27 @@
 						:disabled="loading"
 						icon="mdi:twitter"
 					/>
+
+					<template #help>
+						<span>
+							Username or full URL
+							<template v-if="twitterUrl">
+								•
+								<NuxtLink
+									:to="twitterUrl"
+									target="_blank"
+									class="text-blue-600 hover:underline"
+								>
+									{{ twitterUrl }}
+								</NuxtLink>
+							</template>
+						</span>
+					</template>
 				</UFormField>
 
 				<UFormField
 					label="Instagram"
 					name="instagram"
-					help="Username or full URL"
 				>
 					<UInput
 						v-model="state.instagram"
@@ -202,12 +241,27 @@
 						:disabled="loading"
 						icon="mdi:instagram"
 					/>
+
+					<template #help>
+						<span>
+							Username or full URL
+							<template v-if="instagramUrl">
+								•
+								<NuxtLink
+									:to="instagramUrl"
+									target="_blank"
+									class="text-blue-600 hover:underline"
+								>
+									{{ instagramUrl }}
+								</NuxtLink>
+							</template>
+						</span>
+					</template>
 				</UFormField>
 
 				<UFormField
 					label="Patreon"
 					name="patreon"
-					help="Username or full URL"
 				>
 					<UInput
 						v-model="state.patreon"
@@ -216,6 +270,22 @@
 						:disabled="loading"
 						icon="mdi:patreon"
 					/>
+
+					<template #help>
+						<span>
+							Username or full URL
+							<template v-if="patreonUrl">
+								•
+								<NuxtLink
+									:to="patreonUrl"
+									target="_blank"
+									class="text-blue-600 hover:underline"
+								>
+									{{ patreonUrl }}
+								</NuxtLink>
+							</template>
+						</span>
+					</template>
 				</UFormField>
 			</div>
 		</div>
@@ -265,19 +335,72 @@ const state = reactive<SettingsInput>({
 });
 
 const loading = ref(false);
+const initialLoading = ref(true);
 const error = ref('');
 const faviconFile = ref<File | null>(null);
 const faviconPreview = ref<string | null>(null);
 const faviconPngFile = ref<File | null>(null);
 const faviconPngPreview = ref<string | null>(null);
 
+const isValidUrl = (value: string, allowedHosts: string[]): boolean => {
+	try {
+		const url = new URL(value);
+		return (
+			(url.protocol === 'http:' || url.protocol === 'https:') &&
+			allowedHosts.some((host) => url.hostname === host || url.hostname === `www.${host}`)
+		);
+	} catch {
+		return false;
+	}
+};
+
+// Computed properties for social media URLs
+const githubUrl = computed(() => {
+	if (!state.github) return '';
+	const allowedHosts = ['github.com'];
+	if (isValidUrl(state.github, allowedHosts)) {
+		return state.github;
+	}
+	return `https://github.com/${state.github}`;
+});
+
+const twitterUrl = computed(() => {
+	if (!state.twitter) return '';
+	const allowedHosts = ['x.com', 'twitter.com'];
+	if (isValidUrl(state.twitter, allowedHosts)) {
+		return state.twitter;
+	}
+	return `https://x.com/${state.twitter}`;
+});
+
+const instagramUrl = computed(() => {
+	if (!state.instagram) return '';
+	const allowedHosts = ['instagram.com'];
+	if (isValidUrl(state.instagram, allowedHosts)) {
+		return state.instagram;
+	}
+	return `https://instagram.com/${state.instagram}`;
+});
+
+const patreonUrl = computed(() => {
+	if (!state.patreon) return '';
+	const allowedHosts = ['patreon.com'];
+	if (isValidUrl(state.patreon, allowedHosts)) {
+		return state.patreon;
+	}
+	return `https://patreon.com/${state.patreon}`;
+});
+
 // Load current settings on mount
 onMounted(async () => {
+	initialLoading.value = true;
 	try {
 		const response = await $fetch('/api/settings');
 		Object.assign(state, response);
 	} catch (err: any) {
 		error.value = 'Failed to load settings';
+	} finally {
+		initialLoading.value = false;
 	}
 });
 
