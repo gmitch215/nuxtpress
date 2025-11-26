@@ -93,6 +93,38 @@ const year0 = parseInt(year?.toString() || '0', 10);
 const month0 = parseInt(month?.toString() || '0', 10);
 const day0 = parseInt(day?.toString() || '0', 10);
 
+if (isNaN(year0) || isNaN(month0) || isNaN(day0)) {
+	throw createError({
+		statusCode: 404,
+		statusMessage: `Page not found: /${year}/${month}/${day}/${slug}`,
+		message: 'Page not found. The requested blog post does not exist.'
+	});
+}
+
+if (year0 < 2000 || year0 > new Date().getFullYear()) {
+	throw createError({
+		statusCode: 404,
+		statusMessage: 'Invalid year',
+		message: 'The requested year is not valid or out of range.'
+	});
+}
+
+if (month0 < 1 || month0 > 12) {
+	throw createError({
+		statusCode: 404,
+		statusMessage: 'Invalid month',
+		message: 'The requested month is not valid or out of range.'
+	});
+}
+
+if (day0 < 1 || day0 > 31) {
+	throw createError({
+		statusCode: 404,
+		statusMessage: 'Invalid day',
+		message: 'The requested day is not valid or out of range.'
+	});
+}
+
 const { data: post, error } = await useAsyncData(
 	`blog-post-${slug}-${year0}-${month0}-${day0}`,
 	async () => {

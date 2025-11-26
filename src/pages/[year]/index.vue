@@ -49,6 +49,21 @@ const { posts, fetchPosts } = useBlogPosts();
 const route = useRoute();
 
 const year = parseInt(route.params.year?.toString() || '0', 10);
+if (isNaN(year)) {
+	throw createError({
+		statusCode: 404,
+		statusMessage: `Page not found: /${route.params.year}`,
+		message: 'Page not found. The requested page does not exist.'
+	});
+}
+
+if (year < 2000 || year > new Date().getFullYear()) {
+	throw createError({
+		statusCode: 404,
+		statusMessage: 'Invalid year',
+		message: 'The requested year is not valid or out of range.'
+	});
+}
 
 const filteredPosts = computed(() => {
 	return posts.value.filter((post) => {

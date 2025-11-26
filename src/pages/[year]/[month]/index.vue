@@ -53,6 +53,30 @@ const route = useRoute();
 const year = parseInt(route.params.year?.toString() || '0', 10);
 const month = parseInt(route.params.month?.toString() || '0', 10);
 
+if (isNaN(year) || isNaN(month)) {
+	throw createError({
+		statusCode: 404,
+		statusMessage: `Page not found: /${route.params.year}/${route.params.month}`,
+		message: 'Page not found. The requested date does not exist.'
+	});
+}
+
+if (year < 2000 || year > new Date().getFullYear()) {
+	throw createError({
+		statusCode: 404,
+		statusMessage: 'Invalid year',
+		message: 'The requested year is not valid or out of range.'
+	});
+}
+
+if (month < 1 || month > 12) {
+	throw createError({
+		statusCode: 404,
+		statusMessage: 'Invalid month',
+		message: 'The requested month is not valid or out of range.'
+	});
+}
+
 const monthName = computed(() => {
 	const monthNames = [
 		'January',
