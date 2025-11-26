@@ -14,6 +14,28 @@ const props = defineProps<{
 	posts: BlogPost[];
 }>();
 
+const { renderMarkdown } = useMarkdown();
+
+// Helper to strip HTML tags and decode entities to get plain text
+const stripHtml = (html: string): string => {
+	if (import.meta.client) {
+		// Use browser's DOMParser to properly decode HTML entities
+		const doc = new DOMParser().parseFromString(html, 'text/html');
+		return doc.body.textContent || '';
+	}
+	// Server-side fallback: basic entity decoding
+	return html
+		.replace(/<[^>]*>/g, '')
+		.replace(/&nbsp;/g, ' ')
+		.replace(/&amp;/g, '&')
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;/g, "'")
+		.replace(/&#x27;/g, "'")
+		.trim();
+};
+
 const imageBlobs: string[] = [];
 const displayed = computed(() =>
 	props.posts.map((post: BlogPost) => {
@@ -34,10 +56,17 @@ const displayed = computed(() =>
 		const month = date.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
 		const day = date.getDate(); // getDate() returns day of month
 
+		// Render markdown first, then strip HTML for description preview
+		let description = '';
+		if (post.content) {
+			const rendered = renderMarkdown(post.content);
+			const plainText = stripHtml(rendered);
+			description = plainText.slice(0, 150) + (plainText.length > 150 ? '...' : '');
+		}
+
 		const display = {
 			title: post.title,
-			description:
-				post.content?.slice(0, 100) + (post.content && post.content.length > 100 ? '...' : ''),
+			description,
 			date: post.created_at,
 			badge: post.tags?.[0] || 'General',
 			image,

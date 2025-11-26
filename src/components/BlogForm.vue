@@ -44,18 +44,11 @@
 		<UFormField
 			label="Content"
 			name="content"
-			class="w-4/5"
+			class="w-full"
 			required
 		>
-			<UTextarea
-				v-model="state.content"
-				placeholder="Write your post content here..."
-				class="w-full"
-				:rows="10"
-				:disabled="loading"
-			/>
+			<BlogFormContent v-model="state.content" />
 		</UFormField>
-
 		<UFormField
 			label="Thumbnail"
 			name="thumbnail_url"
