@@ -17,6 +17,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@cloudflare/workers-types": "^4.20251126.0",
     "@nuxt/icon": "^2.1.0",
     "@nuxt/image": "^2.0.0",
     "@nuxt/kit": "^4.2.0",
@@ -36,7 +37,6 @@
     "@iconify-json/material-symbols": "^1.2.46",
     "@iconify-json/mdi": "^1.2.3",
     "@nuxtjs/google-fonts": "^3.2.0",
-    "@types/bun": "latest",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.6",
     "prettier": "^3.6.2",
