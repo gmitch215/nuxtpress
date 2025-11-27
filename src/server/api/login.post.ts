@@ -36,6 +36,7 @@ export default defineEventHandler(async (event) => {
 	if (!timingSafeEqual(password || '', correct || '')) {
 		throw createError<{ ok: boolean }>({
 			statusCode: 401,
+			statusMessage: 'Unauthorized',
 			data: {
 				ok: false
 			}
