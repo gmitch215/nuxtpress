@@ -9,6 +9,7 @@ export default defineNuxtConfig({
 	runtimeConfig: {
 		password: process.env.NUXT_PASSWORD || 'password',
 		public: {
+			site_url: process.env.NUXT_PUBLIC_SITE_URL,
 			name: process.env.NUXT_PUBLIC_NAME || 'NuxtPress',
 			description: process.env.NUXT_PUBLIC_DESCRIPTION || 'My NuxtPress blog',
 			author: process.env.NUXT_PUBLIC_AUTHOR || 'Gregory Mitchell',
