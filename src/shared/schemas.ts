@@ -10,7 +10,7 @@ export const blogPostSchema = z.object({
 	content: z
 		.string()
 		.min(1, 'Content is required')
-		.max(10000, 'Content must be 10,000 characters or less'),
+		.max(500000, 'Content must be 500,000 characters or less'),
 	thumbnail_url: z.url('Must be a valid URL').optional().or(z.literal('')),
 	tags: z.array(z.string().max(50, 'Tag must be 50 characters or less')).default([])
 });
