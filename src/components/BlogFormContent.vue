@@ -261,15 +261,16 @@ const inlinePreviewHtml = computed(() => {
 	};
 
 	// apply formatting only outside code blocks
+	// use spans with classes instead of semantic tags to preserve exact character positioning
 	html = html.replace(/\*\*(.+?)\*\*/g, (match, content, offset) => {
 		if (isInCodeBlock(offset)) return match;
 		if (/```|`/.test(match)) return match;
-		return `<strong>**${content}**</strong>`;
+		return `<span class="md-bold">**${content}**</span>`;
 	});
 
 	html = html.replace(/^(#{1,6})(\s+)(.+?)$/gm, (match, hashes, space, text) => {
 		if (text.trim()) {
-			return `<strong>${hashes}${space}${text}</strong>`;
+			return `<span class="md-heading">${hashes}${space}${text}</span>`;
 		}
 
 		return match;
@@ -280,25 +281,25 @@ const inlinePreviewHtml = computed(() => {
 		// don't format if it contains code block syntax
 		if (/```|`/.test(match)) return match;
 
-		return `<em>*${content}*</em>`;
+		return `<span class="md-italic">*${content}*</span>`;
 	});
 
 	html = html.replace(/_(.+?)_/g, (match, content, offset) => {
 		if (isInCodeBlock(offset)) return match;
 		if (/```|`/.test(match)) return match;
-		return `<em>_${content}_</em>`;
+		return `<span class="md-italic">_${content}_</span>`;
 	});
 
 	html = html.replace(/~~(.+?)~~/g, (match, content, offset) => {
 		if (isInCodeBlock(offset)) return match;
 		if (/```|`/.test(match)) return match;
-		return `<del>~~${content}~~</del>`;
+		return `<span class="md-strikethrough">~~${content}~~</span>`;
 	});
 
 	html = html.replace(/&lt;u&gt;(.+?)&lt;\/u&gt;/g, (match, content, offset) => {
 		if (isInCodeBlock(offset)) return match;
 		if (/```|`/.test(match)) return match;
-		return `<u>&lt;u&gt;${content}&lt;/u&gt;</u>`;
+		return `<span class="md-underline">&lt;u&gt;${content}&lt;/u&gt;</span>`;
 	});
 
 	return DOMPurify.sanitize(html);
@@ -629,6 +630,7 @@ const insertAtCursor = (text: string) => {
 	position: relative;
 	z-index: 2;
 	line-height: 1.5rem;
+	padding: 0.5rem 0.75rem 0.5rem 0.75rem !important;
 }
 
 .dark .blog-form-content :deep(textarea) {
@@ -642,13 +644,10 @@ const insertAtCursor = (text: string) => {
 .inline-preview-overlay {
 	position: absolute;
 	top: 0px;
-	left: 1px;
-	right: 1px;
-	bottom: 1px;
-	padding-top: 0.5rem;
-	padding-bottom: 0.5rem;
-	padding-left: 0.6rem;
-	padding-right: 0.75rem;
+	left: 0px;
+	right: 0px;
+	bottom: 0px;
+	padding: 0.5rem 0.75rem 0.5rem 0.75rem;
 	pointer-events: none;
 	white-space: pre-wrap;
 	word-wrap: break-word;
@@ -662,6 +661,31 @@ const insertAtCursor = (text: string) => {
 
 .dark .inline-preview-overlay {
 	color: rgb(229, 231, 235);
+}
+
+.inline-preview-overlay :deep(.md-bold) {
+	font-weight: 700;
+}
+
+.inline-preview-overlay :deep(.md-italic) {
+	font-style: italic;
+}
+
+.inline-preview-overlay :deep(.md-strikethrough) {
+	text-decoration: line-through;
+}
+
+.inline-preview-overlay :deep(.md-underline) {
+	text-decoration: underline;
+}
+
+.inline-preview-overlay :deep(.md-heading) {
+	font-weight: 700;
+	color: rgb(59, 130, 246);
+}
+
+.dark .inline-preview-overlay :deep(.md-heading) {
+	color: rgb(96, 165, 250);
 }
 
 .prose {
