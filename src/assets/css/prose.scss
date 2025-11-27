@@ -1,97 +1,101 @@
+@layer components {
+	@media (prefers-color-scheme: light) {
+		@import 'highlight.js/styles/github.css' layer(syntax-light);
+	}
+
+	@media (prefers-color-scheme: dark) {
+		@import 'highlight.js/styles/github-dark.css' layer(syntax-dark);
+	}
+
+	:is(.dark *) {
+		@import 'highlight.js/styles/github-dark.css' layer(syntax-dark-class);
+	}
+}
+
 @layer utilities {
-	.prose {
-		h1 {
-			@apply mt-8 mb-4 text-4xl font-bold;
-		}
-		h2 {
-			@apply mt-6 mb-3 text-3xl font-bold;
-		}
+	.prose h1 {
+		@apply mt-8 mb-4 text-4xl font-bold;
+	}
 
-		h3 {
-			@apply mt-5 mb-2 text-2xl font-semibold;
-		}
+	.prose h2 {
+		@apply mt-6 mb-3 text-3xl font-bold;
+	}
 
-		h4 {
-			@apply mt-4 mb-2 text-xl font-semibold;
-		}
+	.prose h3 {
+		@apply mt-5 mb-2 text-2xl font-semibold;
+	}
 
-		h5 {
-			@apply mt-3 mb-2 text-lg font-medium;
-		}
+	.prose h4 {
+		@apply mt-4 mb-2 text-xl font-semibold;
+	}
 
-		h6 {
-			@apply mt-3 mb-2 text-base font-medium;
-		}
+	.prose h5 {
+		@apply mt-3 mb-2 text-lg font-medium;
+	}
 
-		p {
-			@apply my-4 leading-relaxed;
-		}
+	.prose h6 {
+		@apply mt-3 mb-2 text-base font-medium;
+	}
 
-		a {
-			@apply text-blue-600 underline hover:text-blue-800;
-		}
+	.prose p {
+		@apply my-4 leading-relaxed;
+	}
 
-		ul,
-		ol {
-			@apply my-4 ml-6;
-		}
+	.prose a {
+		@apply text-blue-600 underline hover:text-blue-800;
+	}
 
-		ul {
-			@apply list-disc;
-		}
+	.prose ul,
+	.prose ol {
+		@apply my-4 ml-6;
+	}
 
-		ol {
-			@apply list-decimal;
-		}
+	.prose ul {
+		@apply list-disc;
+	}
 
-		li {
-			@apply my-2;
-		}
+	.prose ol {
+		@apply list-decimal;
+	}
 
-		blockquote {
-			@apply my-4 border-l-4 border-neutral-300 pl-4 italic;
-		}
+	.prose li {
+		@apply my-2;
+	}
 
-		code {
-			@apply bg-accented/50 rounded px-1 py-0.5 font-mono text-sm;
-		}
+	.prose blockquote {
+		@apply my-4 border-l-4 border-neutral-300 pl-4 italic;
+	}
 
-		pre {
-			@apply border-accented/40 my-4 overflow-x-auto rounded border-2;
+	.prose code {
+		@apply bg-accented/50 rounded px-1 py-0.5 font-mono text-sm;
+	}
 
-			code {
-				@apply bg-transparent;
-			}
-		}
+	.prose pre {
+		@apply border-accented/40 my-4 overflow-x-auto rounded border-2;
+	}
 
-		img {
-			@apply my-4 rounded;
-		}
+	.prose pre code {
+		@apply bg-transparent;
+	}
 
-		table {
-			@apply my-4 w-full border-collapse;
-		}
+	.prose img {
+		@apply my-4 rounded;
+	}
 
-		th,
-		td {
-			@apply border border-neutral-300 px-4 py-2;
-		}
+	.prose table {
+		@apply my-4 w-full border-collapse;
+	}
 
-		th {
-			@apply bg-accented/50 font-semibold;
-		}
+	.prose th,
+	.prose td {
+		@apply border border-neutral-300 px-4 py-2;
+	}
 
-		hr {
-			@apply my-8 border-neutral-300;
-		}
+	.prose th {
+		@apply bg-accented/50 font-semibold;
+	}
 
-		@import 'highlight.js/styles/github.css';
-		@media (prefers-color-scheme: dark) {
-			@import 'highlight.js/styles/github-dark.css';
-		}
-
-		:is(.dark *) {
-			@import 'highlight.js/styles/github-dark.css';
-		}
+	.prose hr {
+		@apply my-8 border-neutral-300;
 	}
 }

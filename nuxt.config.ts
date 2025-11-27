@@ -28,7 +28,14 @@ export default defineNuxtConfig({
 	serverDir: 'src/server',
 	css: ['~/assets/css/main.css', '~/assets/css/prose.scss'],
 	vite: {
-		plugins: [tailwindcss()]
+		plugins: [tailwindcss()],
+		css: {
+			devSourcemap: true,
+			transformer: 'lightningcss'
+		},
+		build: {
+			cssMinify: 'lightningcss'
+		}
 	},
 	hub: {
 		cache: true,
