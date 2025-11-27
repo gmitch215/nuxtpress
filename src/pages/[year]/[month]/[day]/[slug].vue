@@ -131,7 +131,7 @@ const isValidDate =
 	!isNaN(month0) &&
 	!isNaN(day0) &&
 	year0 >= 2000 &&
-	year0 <= new Date().getFullYear() + 1 &&
+	year0 <= new Date().getUTCFullYear() + 1 &&
 	month0 >= 1 &&
 	month0 <= 12 &&
 	day0 >= 1 &&

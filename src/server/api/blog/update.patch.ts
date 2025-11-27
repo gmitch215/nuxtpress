@@ -62,14 +62,14 @@ export default defineEventHandler(async (event) => {
 
 	if (oldPost) {
 		const oldDate = new Date(oldPost.created_at);
-		const oldCacheKey = `nuxtpress:blog_post:${oldPost.slug}:${oldDate.getFullYear()}:${oldDate.getMonth() + 1}:${oldDate.getDate()}`;
+		const oldCacheKey = `nuxtpress:blog_post:${oldPost.slug}:${oldDate.getUTCFullYear()}:${oldDate.getUTCMonth() + 1}:${oldDate.getUTCDate()}`;
 		await kv.del(oldCacheKey);
 
 		if (oldPost.slug !== post.slug) {
 			await kv.del(`nuxtpress:slug_exists:${oldPost.slug}`);
 		}
 
-		const newCacheKey = `nuxtpress:blog_post:${post.slug}:${oldDate.getFullYear()}:${oldDate.getMonth() + 1}:${oldDate.getDate()}`;
+		const newCacheKey = `nuxtpress:blog_post:${post.slug}:${oldDate.getUTCFullYear()}:${oldDate.getUTCMonth() + 1}:${oldDate.getUTCDate()}`;
 		await kv.del(newCacheKey);
 	}
 });

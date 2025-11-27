@@ -51,9 +51,9 @@ const displayed = computed(() =>
 		}
 
 		const date = new Date(post.created_at);
-		const year = date.getFullYear();
-		const month = date.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
-		const day = date.getDate(); // getDate() returns day of month
+		const year = date.getUTCFullYear();
+		const month = date.getUTCMonth() + 1;
+		const day = date.getUTCDate();
 
 		// Render markdown first, then strip HTML for description preview
 		let description = '';

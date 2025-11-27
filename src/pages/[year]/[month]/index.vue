@@ -61,7 +61,7 @@ if (isNaN(year) || isNaN(month)) {
 	});
 }
 
-if (year < 2000 || year > new Date().getFullYear()) {
+if (year < 2000 || year > new Date().getUTCFullYear()) {
 	throw createError({
 		statusCode: 404,
 		statusMessage: 'Invalid year',
@@ -98,7 +98,7 @@ const monthName = computed(() => {
 const filteredPosts = computed(() => {
 	return posts.value.filter((post) => {
 		const postDate = new Date(post.created_at);
-		return postDate.getFullYear() === year && postDate.getMonth() + 1 === month;
+		return postDate.getUTCFullYear() === year && postDate.getUTCMonth() + 1 === month;
 	});
 });
 
@@ -115,8 +115,8 @@ const days = computed(() => {
 	const daySet = new Set<number>();
 	posts.value.forEach((post) => {
 		const postDate = new Date(post.created_at);
-		if (postDate.getFullYear() === year && postDate.getMonth() + 1 === month) {
-			daySet.add(postDate.getDate());
+		if (postDate.getUTCFullYear() === year && postDate.getUTCMonth() + 1 === month) {
+			daySet.add(postDate.getUTCDate());
 		}
 	});
 	return Array.from(daySet).sort((a, b) => a - b);

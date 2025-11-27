@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
 		await kv.del(`nuxtpress:slug_exists:${post.slug}`);
 
 		const postDate = new Date(post.created_at);
-		const cacheKey = `nuxtpress:blog_post:${post.slug}:${postDate.getFullYear()}:${postDate.getMonth() + 1}:${postDate.getDate()}`;
+		const cacheKey = `nuxtpress:blog_post:${post.slug}:${postDate.getUTCFullYear()}:${postDate.getUTCMonth() + 1}:${postDate.getUTCDate()}`;
 		await kv.del(cacheKey);
 	}
 });

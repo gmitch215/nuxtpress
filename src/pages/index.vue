@@ -130,7 +130,7 @@ const years = computed(() => {
 	const yearSet = new Set<number>();
 	posts.value.forEach((post) => {
 		const postDate = new Date(post.created_at);
-		yearSet.add(postDate.getFullYear());
+		yearSet.add(postDate.getUTCFullYear());
 	});
 	return Array.from(yearSet).sort((a, b) => b - a);
 });
