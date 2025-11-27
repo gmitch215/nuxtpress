@@ -39,33 +39,45 @@ export default defineEventHandler(async (event) => {
 	const db = hubDatabase();
 	checkTable(db);
 
-	// Format date for SQL comparison (YYYY-MM-DD)
-	const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+	// Get all posts with the same slug
+	const posts = await db
+		.prepare('SELECT * FROM blog_posts WHERE slug = ?1')
+		.bind(slug)
+		.all<BlogPost>()
+		.then((result) => {
+			if (!result.success) {
+				throw createError({
+					statusCode: 500,
+					statusMessage: 'Database query failed'
+				});
+			}
 
-	const res = await db
-		.prepare('SELECT * FROM blog_posts WHERE slug = ?1 AND DATE(created_at) = ?2')
-		.bind(slug, dateStr)
-		.first<BlogPost>()
-		.then((row) => {
-			if (!row) return null;
-
-			// Parse the post data properly
-			return {
+			return result.results.map((row) => ({
 				...row,
 				created_at: new Date(row.created_at as any),
 				updated_at: new Date(row.updated_at as any),
 				tags: (row.tags as any)
 					? (row.tags as any as string).split(',').map((t: string) => t.trim())
 					: []
-			} as BlogPost;
+			})) as BlogPost[];
 		});
 
-	if (!res) {
+	if (!posts || posts.length === 0) {
 		throw createError({
 			statusCode: 404,
 			statusMessage: 'Post not found'
 		});
 	}
+
+	// Construct the target date from the URL params
+	const targetDate = new Date(Number(year), Number(month) - 1, Number(day));
+
+	// Find the post with the closest date to the target
+	const res = posts.reduce((closest, current) => {
+		const closestDiff = Math.abs(closest.created_at.getTime() - targetDate.getTime());
+		const currentDiff = Math.abs(current.created_at.getTime() - targetDate.getTime());
+		return currentDiff < closestDiff ? current : closest;
+	});
 
 	// Cache the result
 	await kv.set(cacheKey, JSON.stringify(res), { ttl: 60 * 60 * 4 }); // 4 hours
