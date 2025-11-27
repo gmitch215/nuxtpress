@@ -69,6 +69,14 @@
 			</div>
 
 			<ClientOnly>
+				<span :style="`color: ${settings.themeColor || $config.public.themeColor}`"
+					>{{ Math.max(1, Math.floor(post.content.length / 200)) }} min. read</span
+				>
+				<span
+					v-if="!renderedContent"
+					class="text-gray-500 dark:text-gray-400"
+					>Loading content...</span
+				>
 				<div
 					class="prose prose-lg dark:prose-invert max-w-none"
 					v-html="renderedContent"
