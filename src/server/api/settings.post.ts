@@ -16,7 +16,10 @@ export default defineEventHandler(async (event) => {
 		github,
 		twitter,
 		instagram,
-		patreon
+		patreon,
+		linkedin,
+		discord,
+		supportEmail
 	} = await readBody(event);
 
 	if (name) {
@@ -137,6 +140,46 @@ export default defineEventHandler(async (event) => {
 		await kv.set('nuxtpress:setting:patreon', patreon0);
 	}
 
+	if (linkedin) {
+		let linkedin0 = linkedin;
+		if (linkedin.includes('https://') || linkedin.includes('http://')) {
+			linkedin0 = linkedin.replace(/^(https?:\/\/)?(www\.)?linkedin\.com\/in\//, '');
+		}
+
+		await kv.set('nuxtpress:setting:linkedin', linkedin0);
+	}
+
+	if (discord) {
+		// Validate Discord URL - only allow discord.gg/, discord.com/invite/, or discord.com/users/
+		const discordInvitePattern =
+			/^(https?:\/\/)?(discord\.gg\/[a-zA-Z0-9]+|discord\.com\/invite\/[a-zA-Z0-9]+|discord\.com\/users\/\d+)$/;
+
+		if (!discordInvitePattern.test(discord)) {
+			throw createError({
+				statusCode: 400,
+				statusMessage:
+					'Discord must be a valid invite link (discord.gg/ or discord.com/invite/) or user profile (discord.com/users/)'
+			});
+		}
+
+		// Store full URL with https:// if not present
+		const discord0 = discord.startsWith('http') ? discord : `https://${discord}`;
+		await kv.set('nuxtpress:setting:discord', discord0);
+	}
+
+	if (supportEmail) {
+		// Basic email validation
+		const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailPattern.test(supportEmail)) {
+			throw createError({
+				statusCode: 400,
+				statusMessage: 'Support email must be a valid email address'
+			});
+		}
+
+		await kv.set('nuxtpress:setting:support_email', supportEmail);
+	}
+
 	return {
 		name: name || config.public.name,
 		description: description || config.public.description,
@@ -147,6 +190,9 @@ export default defineEventHandler(async (event) => {
 		github: github || config.public.github,
 		twitter: twitter || config.public.twitter,
 		instagram: instagram || config.public.instagram,
-		patreon: patreon || config.public.patreon
+		patreon: patreon || config.public.patreon,
+		linkedin: linkedin || config.public.linkedin,
+		discord: discord || config.public.discord,
+		supportEmail: supportEmail || config.public.supportEmail
 	};
 });

@@ -287,6 +287,91 @@
 						</span>
 					</template>
 				</UFormField>
+
+				<UFormField
+					label="LinkedIn"
+					name="linkedin"
+				>
+					<UInput
+						v-model="state.linkedin"
+						placeholder="username or https://linkedin.com/in/username"
+						class="w-full"
+						:disabled="loading"
+						icon="mdi:linkedin"
+					/>
+					<template #help>
+						<span>
+							Username or full URL
+							<template v-if="linkedinUrl">
+								•
+								<NuxtLink
+									:to="linkedinUrl"
+									target="_blank"
+									class="text-blue-600 hover:underline"
+								>
+									{{ linkedinUrl }}
+								</NuxtLink>
+							</template>
+						</span>
+					</template>
+				</UFormField>
+
+				<UFormField
+					label="Discord"
+					name="discord"
+				>
+					<UInput
+						v-model="state.discord"
+						placeholder="discord.gg/abc123 or discord.com/invite/abc123 or discord.com/users/1234567890"
+						class="w-full"
+						:disabled="loading"
+						icon="mdi:discord"
+					/>
+					<template #help>
+						<span>
+							Discord invite link (discord.gg/ or discord.com/invite/) or user profile
+							(discord.com/users/)
+							<template v-if="discordUrl">
+								•
+								<NuxtLink
+									:to="discordUrl"
+									target="_blank"
+									class="text-blue-600 hover:underline"
+								>
+									{{ discordUrl }}
+								</NuxtLink>
+							</template>
+						</span>
+					</template>
+				</UFormField>
+
+				<UFormField
+					label="Support Email"
+					name="supportEmail"
+				>
+					<UInput
+						v-model="state.supportEmail"
+						placeholder="support@example.com"
+						class="w-full"
+						:disabled="loading"
+						icon="mdi:email-outline"
+					/>
+					<template #help>
+						<span>
+							Email address for support inquiries
+							<template v-if="supportEmailUrl">
+								•
+								<NuxtLink
+									:to="supportEmailUrl"
+									target="_blank"
+									class="text-blue-600 hover:underline"
+								>
+									{{ supportEmailUrl }}
+								</NuxtLink>
+							</template>
+						</span>
+					</template>
+				</UFormField>
 			</div>
 		</div>
 
@@ -331,7 +416,10 @@ const state = reactive<SettingsInput>({
 	github: '',
 	twitter: '',
 	instagram: '',
-	patreon: ''
+	patreon: '',
+	linkedin: '',
+	discord: '',
+	supportEmail: ''
 });
 
 const loading = ref(false);
@@ -389,6 +477,36 @@ const patreonUrl = computed(() => {
 		return state.patreon;
 	}
 	return `https://patreon.com/${state.patreon}`;
+});
+
+const linkedinUrl = computed(() => {
+	if (!state.linkedin) return '';
+	const allowedHosts = ['linkedin.com'];
+	if (isValidUrl(state.linkedin, allowedHosts)) {
+		return state.linkedin;
+	}
+	return `https://linkedin.com/in/${state.linkedin}`;
+});
+
+// either full link to user profile or full discord invite link
+const discordUrl = computed(() => {
+	if (!state.discord) return '';
+	const allowedPatterns = [
+		/^(https?:\/\/)?(discord\.gg\/[a-zA-Z0-9]+)$/,
+		/^(https?:\/\/)?(discord\.com\/invite\/[a-zA-Z0-9]+)$/,
+		/^(https?:\/\/)?(discord\.com\/users\/\d+)$/
+	];
+
+	const hasValidPattern = allowedPatterns.some((pattern) => pattern.test(state.discord ?? ''));
+	if (hasValidPattern) {
+		return state.discord.startsWith('http') ? state.discord : `https://${state.discord}`;
+	}
+	return '';
+});
+
+const supportEmailUrl = computed(() => {
+	if (!state.supportEmail) return '';
+	return `mailto:${state.supportEmail}`;
 });
 
 // Load current settings on mount

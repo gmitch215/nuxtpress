@@ -110,6 +110,9 @@ export function useSettings() {
 		twitter?: string;
 		instagram?: string;
 		patreon?: string;
+		linkedin?: string;
+		discord?: string;
+		supportEmail?: string;
 	}>('blog-settings', () => ({}));
 
 	const fetchSettings = async () => {

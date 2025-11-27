@@ -16,6 +16,10 @@ export default defineEventHandler(async (_) => {
 	const instagram =
 		(await kv.get<string>('nuxtpress:setting:instagram')) || config.public.instagram;
 	const patreon = (await kv.get<string>('nuxtpress:setting:patreon')) || config.public.patreon;
+	const linkedin = (await kv.get<string>('nuxtpress:setting:linkedin')) || config.public.linkedin;
+	const discord = (await kv.get<string>('nuxtpress:setting:discord')) || config.public.discord;
+	const supportEmail =
+		(await kv.get<string>('nuxtpress:setting:support_email')) || config.public.supportEmail;
 
 	return {
 		name,
@@ -27,6 +31,9 @@ export default defineEventHandler(async (_) => {
 		github,
 		twitter,
 		instagram,
-		patreon
+		patreon,
+		linkedin,
+		discord,
+		supportEmail
 	};
 });

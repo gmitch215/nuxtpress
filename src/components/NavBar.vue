@@ -68,6 +68,36 @@
 							class="size-4 sm:size-5 md:size-6"
 						/>
 					</NuxtLink>
+					<NuxtLink
+						v-if="settings.linkedin || $config.public.linkedin"
+						:to="`https://linkedin.com/in/${settings.linkedin || $config.public.linkedin}`"
+						target="_blank"
+					>
+						<UIcon
+							name="cib:linkedin"
+							class="size-4 sm:size-5 md:size-6"
+						/>
+					</NuxtLink>
+					<NuxtLink
+						v-if="settings.discord || $config.public.discord"
+						:to="`${settings.discord || $config.public.discord}`"
+						target="_blank"
+					>
+						<UIcon
+							name="cib:discord"
+							class="size-4 sm:size-5 md:size-6"
+						/>
+					</NuxtLink>
+					<NuxtLink
+						v-if="settings.supportEmail || $config.public.supportEmail"
+						:to="`mailto:${settings.supportEmail || $config.public.supportEmail}`"
+						target="_blank"
+					>
+						<UIcon
+							name="mdi:email-outline"
+							class="size-4 sm:size-5 md:size-6"
+						/>
+					</NuxtLink>
 				</div>
 			</div>
 		</div>

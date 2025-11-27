@@ -34,7 +34,17 @@ export const settingsSchema = z.object({
 	github: z.string().optional(),
 	twitter: z.string().optional(),
 	instagram: z.string().optional(),
-	patreon: z.string().optional()
+	patreon: z.string().optional(),
+	linkedin: z.string().optional(),
+	discord: z
+		.string()
+		.regex(
+			/^(https?:\/\/)?(discord\.gg\/[a-zA-Z0-9]+|discord\.com\/invite\/[a-zA-Z0-9]+|discord\.com\/users\/\d+)$/,
+			'Discord must be a valid invite link (discord.gg/ or discord.com/invite/) or user profile (discord.com/users/)'
+		)
+		.optional()
+		.or(z.literal('')),
+	supportEmail: z.string().email('Must be a valid email').optional().or(z.literal(''))
 });
 
 export type BlogPostInput = z.infer<typeof blogPostSchema>;

@@ -18,7 +18,10 @@ export default defineNuxtConfig({
 			github: process.env.NUXT_PUBLIC_GITHUB || '',
 			instagram: process.env.NUXT_PUBLIC_INSTAGRAM || '',
 			twitter: process.env.NUXT_PUBLIC_TWITTER || '',
-			patreon: process.env.NUXT_PUBLIC_PATREON || ''
+			patreon: process.env.NUXT_PUBLIC_PATREON || '',
+			linkedin: process.env.NUXT_PUBLIC_LINKEDIN || '',
+			discord: process.env.NUXT_PUBLIC_DISCORD || '',
+			supportEmail: process.env.NUXT_PUBLIC_SUPPORT_EMAIL || ''
 		}
 	},
 	ssr: true,
