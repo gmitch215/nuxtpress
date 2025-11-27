@@ -29,31 +29,22 @@ export default defineEventHandler(async (event) => {
 	const kv = hubKV();
 	checkTable(db);
 
-	// Generate unique slug by checking for duplicates and appending -1, -2, etc.
+	// generate unique slug by checking for duplicates on the same date
+	const now = new Date();
+	const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
 	let finalSlug = post.slug;
 	let counter = 1;
 	let slugExists = true;
 
 	while (slugExists) {
-		// Check cache first
-		const cached = await kv.get(`nuxtpress:slug_exists:${finalSlug}`);
-		if (cached === null) {
-			// Not in cache, check database
-			const existing = await db
-				.prepare(`SELECT id FROM blog_posts WHERE slug = ?1`)
-				.bind(finalSlug)
-				.first();
+		const existing = await db
+			.prepare(`SELECT id FROM blog_posts WHERE slug = ?1 AND DATE(created_at) = ?2`)
+			.bind(finalSlug, dateStr)
+			.first();
 
-			if (!existing) {
-				slugExists = false;
-			} else {
-				// Cache that this slug exists
-				await kv.set(`nuxtpress:slug_exists:${finalSlug}`, '1', { ttl: 60 * 60 }); // 1 hour
-				finalSlug = `${post.slug}-${counter}`;
-				counter++;
-			}
+		if (!existing) {
+			slugExists = false;
 		} else {
-			// Slug exists in cache
 			finalSlug = `${post.slug}-${counter}`;
 			counter++;
 		}
@@ -69,10 +60,8 @@ export default defineEventHandler(async (event) => {
 		.bind(id, post.title, finalSlug, post.content)
 		.run();
 
-	// Cache the new slug
-	await kv.set(`nuxtpress:slug_exists:${finalSlug}`, '1', { ttl: 60 * 60 });
-
-	// add optional fields
+	// invalidate caches
+	await kv.del('nuxtpress:blog_posts_list');
 	if (post.thumbnail) {
 		await db
 			.prepare(

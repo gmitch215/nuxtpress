@@ -187,6 +187,7 @@ const loading = ref(false);
 const error = ref('');
 const thumbnailFile = ref<File | null>(null);
 const thumbnailPreview = ref<string | null>(null);
+const slugManuallyEdited = ref(false);
 
 const generateSlug = (title: string): string => {
 	return title
@@ -197,10 +198,21 @@ const generateSlug = (title: string): string => {
 		.replace(/^-+|-+$/g, '');
 };
 
+// Track manual slug edits
+watch(
+	() => state.slug,
+	(newSlug, oldSlug) => {
+		// If the slug was changed and it's not from auto-generation
+		if (oldSlug !== undefined && newSlug !== generateSlug(state.title)) {
+			slugManuallyEdited.value = true;
+		}
+	}
+);
+
 watch(
 	() => state.title,
 	(newTitle) => {
-		if (props.mode !== 'edit') {
+		if (!slugManuallyEdited.value && props.mode !== 'edit') {
 			state.slug = generateSlug(newTitle);
 		}
 	}

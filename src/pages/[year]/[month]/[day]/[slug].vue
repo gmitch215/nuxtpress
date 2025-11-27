@@ -24,6 +24,17 @@
 							}"
 							@click="editorOpen = true"
 						/>
+						<UButton
+							v-if="loggedIn"
+							icon="mdi:delete"
+							class="ml-2"
+							color="error"
+							:ui="{
+								base: 'size-7 lg:size-8 justify-center items-center',
+								leadingIcon: 'size-4 lg:size-5'
+							}"
+							@click="deletePost"
+						/>
 					</ClientOnly>
 				</div>
 
@@ -98,47 +109,31 @@ const { loggedIn } = useLogin();
 const editorOpen = ref(false);
 
 const route = useRoute();
+const router = useRouter();
+const toast = useToast();
 const { year, month, day, slug } = route.params;
 
 const year0 = parseInt(year?.toString() || '0', 10);
 const month0 = parseInt(month?.toString() || '0', 10);
 const day0 = parseInt(day?.toString() || '0', 10);
 
-if (isNaN(year0) || isNaN(month0) || isNaN(day0)) {
-	throw createError({
-		statusCode: 404,
-		statusMessage: `Page not found: /${year}/${month}/${day}/${slug}`,
-		message: 'Page not found. The requested blog post does not exist.'
-	});
-}
-
-if (year0 < 2000 || year0 > new Date().getFullYear()) {
-	throw createError({
-		statusCode: 404,
-		statusMessage: 'Invalid year',
-		message: 'The requested year is not valid or out of range.'
-	});
-}
-
-if (month0 < 1 || month0 > 12) {
-	throw createError({
-		statusCode: 404,
-		statusMessage: 'Invalid month',
-		message: 'The requested month is not valid or out of range.'
-	});
-}
-
-if (day0 < 1 || day0 > 31) {
-	throw createError({
-		statusCode: 404,
-		statusMessage: 'Invalid day',
-		message: 'The requested day is not valid or out of range.'
-	});
-}
+// Basic validation without throwing errors
+const isValidDate =
+	!isNaN(year0) &&
+	!isNaN(month0) &&
+	!isNaN(day0) &&
+	year0 >= 2000 &&
+	year0 <= new Date().getFullYear() + 1 &&
+	month0 >= 1 &&
+	month0 <= 12 &&
+	day0 >= 1 &&
+	day0 <= 31;
 
 const { data: post, error } = await useAsyncData(
 	`blog-post-${slug}-${year0}-${month0}-${day0}`,
 	async () => {
+		if (!isValidDate) return null;
+
 		try {
 			const res = await $fetch<BlogPost>(
 				`/api/blog/find?slug=${slug}&year=${year0}&month=${month0}&day=${day0}`,
@@ -162,7 +157,9 @@ const { data: post, error } = await useAsyncData(
 if (error.value || !post.value) {
 	throw createError({
 		statusCode: 404,
-		statusMessage: `Blog Post not found: ${slug}`
+		statusMessage: 'Blog Post Not Found',
+		message: `The blog post you're looking for doesn't exist or may have been removed.`,
+		fatal: false
 	});
 }
 
@@ -205,4 +202,27 @@ onBeforeUnmount(() => {
 		URL.revokeObjectURL(thumbnailUrl.value);
 	}
 });
+
+async function deletePost() {
+	if (!loggedIn.value || !post.value) return;
+
+	const yes = confirm(
+		'Are you sure you want to delete this blog post? This action cannot be undone.'
+	);
+	if (!yes) return;
+
+	await $fetch(`/api/blog/remove?id=${post.value.id}`, {
+		method: 'DELETE'
+	});
+
+	toast.add({
+		title: 'Post Deleted',
+		description: `The blog post '${post.value.title}' has been deleted successfully.`,
+		icon: 'mdi:delete',
+		duration: 5000,
+		color: 'error'
+	});
+
+	router.push('/');
+}
 </script>
