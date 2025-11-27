@@ -1,5 +1,5 @@
 <template>
-	<div class="w-full justify-center px-32 mt-8">
+	<div class="w-full justify-center px-4 sm:px-8 md:px-12 lg:px-24 xl:px-32 mt-8">
 		<UBlogPosts
 			:posts="displayed"
 			:orientation="$viewport.isLessOrEquals('mobileMedium') ? 'vertical' : 'horizontal'"
@@ -16,14 +16,13 @@ const props = defineProps<{
 
 const { renderMarkdown } = useMarkdown();
 
-// Helper to strip HTML tags and decode entities to get plain text
 const stripHtml = (html: string): string => {
 	if (import.meta.client) {
-		// Use browser's DOMParser to properly decode HTML entities
+		// use browser's DOMParser to properly decode HTML entities
 		const doc = new DOMParser().parseFromString(html, 'text/html');
 		return doc.body.textContent || '';
 	}
-	// Server-side fallback: basic entity decoding
+
 	return html
 		.replace(/<[^>]*>/g, '')
 		.replace(/&nbsp;/g, ' ')

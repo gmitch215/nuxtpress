@@ -3,12 +3,12 @@
 		id="navbar"
 		class="border-b-2 border-b-black p-4 flex items-center bg-accented/60 light:bg-accented"
 	>
-		<div class="flex items-center justify-center w-full px-2">
+		<div class="flex items-center justify-center w-full sm:px-2">
 			<NuxtLink to="/">
 				<NuxtImg
 					src="/favicon.png"
 					alt="Logo"
-					class="min-w-8 w-8 h-auto xl:w-12 inline-block mr-2 hover:scale-105 transition-transform duration-300"
+					class="min-w-4 w-8 h-auto lg:w-10 xl:w-12 inline-block mr-2 hover:scale-105 transition-transform duration-300"
 				/>
 			</NuxtLink>
 			<div
@@ -16,7 +16,7 @@
 			>
 				<NuxtLink
 					to="/"
-					class="ml-2 text-md sm:text-lg lg:text-xl font-semibold"
+					class="ml-2 text-xs sm:text-sm md:text-md lg:text-lg xl:text-xl font-semibold"
 					>{{ settings.name || $config.public.name }}</NuxtLink
 				>
 				<span class="text-xs md:text-sm lg:text-lg whitespace-nowrap">{{
