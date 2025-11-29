@@ -70,7 +70,7 @@
 
 			<ClientOnly>
 				<span :style="`color: ${settings.themeColor || $config.public.themeColor}`"
-					>{{ Math.max(1, Math.floor(post.content.length / 200)) }} min. read</span
+					>{{ Math.max(1, Math.floor(post.content.length / 1190)) }} min. read</span
 				>
 				<span
 					v-if="!renderedContent"
