@@ -39,7 +39,7 @@
 			label="Description"
 			name="description"
 			class="w-4/5"
-			help="Maximum 160 characters"
+			help="Maximum 160 characters, shown in the navigation bar"
 		>
 			<UTextarea
 				v-model="state.description"
@@ -51,13 +51,29 @@
 		</UFormField>
 
 		<UFormField
+			label="Bio"
+			name="bio"
+			class="w-4/5"
+			help="A short bio about yourself (maximum 500 characters) shown on the about page"
+		>
+			<UTextarea
+				v-model="state.bio"
+				placeholder="This is my NuxtPress blog where I share my thoughts..."
+				class="w-full"
+				:rows="4"
+				:disabled="loading"
+			/>
+		</UFormField>
+
+		<UFormField
 			label="Author"
 			name="author"
+			help="Name of the blog author"
 			class="min-w-60 w-3/5"
 		>
 			<UInput
 				v-model="state.author"
-				placeholder="Enter author name"
+				placeholder="Enter your name (the author)"
 				class="w-full"
 				:disabled="loading"
 			/>
@@ -409,6 +425,7 @@ const emit = defineEmits<{
 const state = reactive<SettingsInput>({
 	name: '',
 	description: '',
+	bio: '',
 	author: '',
 	themeColor: '',
 	favicon: '',

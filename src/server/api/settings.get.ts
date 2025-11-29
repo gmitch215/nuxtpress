@@ -5,6 +5,7 @@ export default defineEventHandler(async (_) => {
 	const name = (await kv.get<string>('nuxtpress:setting:name')) || config.public.name;
 	const description =
 		(await kv.get<string>('nuxtpress:setting:description')) || config.public.description;
+	const bio = (await kv.get<string>('nuxtpress:setting:bio')) || '';
 	const author = (await kv.get<string>('nuxtpress:setting:author')) || config.public.author;
 	const themeColor =
 		(await kv.get<string>('nuxtpress:setting:theme_color')) || config.public.themeColor;
@@ -24,6 +25,7 @@ export default defineEventHandler(async (_) => {
 	return {
 		name,
 		description,
+		bio,
 		themeColor,
 		author,
 		favicon,

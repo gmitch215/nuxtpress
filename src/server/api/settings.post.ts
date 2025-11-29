@@ -9,6 +9,7 @@ export default defineEventHandler(async (event) => {
 	const {
 		name,
 		description,
+		bio,
 		author,
 		themeColor,
 		favicon,
@@ -42,6 +43,17 @@ export default defineEventHandler(async (event) => {
 		}
 
 		await kv.set('nuxtpress:setting:description', description);
+	}
+
+	if (bio) {
+		if (bio.length > 500) {
+			throw createError({
+				statusCode: 400,
+				statusMessage: 'Bio cannot be longer than 500 characters'
+			});
+		}
+
+		await kv.set('nuxtpress:setting:bio', bio);
 	}
 
 	if (author) {

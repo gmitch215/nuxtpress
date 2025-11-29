@@ -102,6 +102,7 @@ export function useSettings() {
 	const settings = useState<{
 		name?: string;
 		description?: string;
+		bio?: string;
 		author?: string;
 		themeColor?: string;
 		favicon?: string;

@@ -44,7 +44,8 @@ export const settingsSchema = z.object({
 		)
 		.optional()
 		.or(z.literal('')),
-	supportEmail: z.string().email('Must be a valid email').optional().or(z.literal(''))
+	supportEmail: z.email('Must be a valid email').optional().or(z.literal('')),
+	bio: z.string().max(500, 'Bio must be 500 characters or less').optional()
 });
 
 export type BlogPostInput = z.infer<typeof blogPostSchema>;
