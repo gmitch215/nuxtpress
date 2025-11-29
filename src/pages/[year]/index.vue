@@ -9,6 +9,13 @@
 				<h2 class="text-lg font-semibold">Browse by Month</h2>
 				<div class="flex flex-wrap gap-2">
 					<UButton
+						to="/"
+						variant="subtle"
+						color="error"
+						icon="mdi:arrow-left"
+						>Back to Home</UButton
+					>
+					<UButton
 						v-for="month in months"
 						:key="month.number"
 						:to="`/${year}/${month.number}`"

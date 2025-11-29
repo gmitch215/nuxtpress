@@ -1,15 +1,15 @@
 <template>
 	<div class="w-full flex space-x-2 justify-center items-center mt-2">
-		<UButton
-			icon="mdi:refresh"
-			color="neutral"
-			variant="outline"
-			:loading="refreshing"
-			:disabled="refreshing"
-			@click="refreshPosts"
-			size="lg"
-		/>
 		<ClientOnly>
+			<UButton
+				icon="mdi:refresh"
+				color="neutral"
+				variant="outline"
+				:loading="refreshing"
+				:disabled="refreshing"
+				@click="refreshPosts"
+				size="lg"
+			/>
 			<UButton
 				v-if="loggedIn"
 				icon="mdi:plus"

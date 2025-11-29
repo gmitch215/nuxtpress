@@ -1,13 +1,20 @@
 <template>
 	<div class="w-full px-8 py-8">
 		<div class="max-w-6xl mx-auto">
-			<h1 class="text-4xl font-bold mb-8">Posts from {{ monthName }} {{ year }}</h1>
+			<h1 class="text-4xl font-bold mb-2">Posts from {{ monthName }} {{ year }}</h1>
 			<div
 				v-if="days.length > 0"
 				class="flex flex-col space-y-2 mb-8"
 			>
 				<h2 class="text-lg font-semibold">Browse by Day</h2>
 				<div class="flex flex-wrap gap-2">
+					<UButton
+						:to="`/${year}`"
+						variant="subtle"
+						color="error"
+						icon="mdi:arrow-left"
+						>Back to {{ year }}</UButton
+					>
 					<UButton
 						v-for="day in days"
 						:key="day"

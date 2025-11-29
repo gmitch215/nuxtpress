@@ -2,6 +2,17 @@
 	<div class="w-full px-8 py-8">
 		<div class="max-w-6xl mx-auto">
 			<h1 class="text-4xl font-bold mb-8">Posts from {{ monthName }} {{ day }}, {{ year }}</h1>
+			<div class="flex flex-col space-y-2 mb-8">
+				<div class="flex flex-wrap gap-2">
+					<UButton
+						:to="`/${year}/${month}`"
+						variant="subtle"
+						color="error"
+						icon="mdi:arrow-left"
+						>Back to {{ monthName }} {{ year }}</UButton
+					>
+				</div>
+			</div>
 
 			<ClientOnly>
 				<div v-if="filteredPosts.length > 0 && !loading">
