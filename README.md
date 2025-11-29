@@ -12,6 +12,7 @@
   - [What is NuxtPress?](#what-is-nuxtpress)
   - [Deploy Your Own Blog](#deploy-your-own-blog)
   - [Configuration](#configuration)
+  - [Installing Updates](#installing-updates-from-the-template)
   - [Using Your Blog](#using-your-blog)
 - [For Developers: Technical Documentation](#for-developers-technical-documentation)
   - [Overview](#overview)
@@ -77,18 +78,22 @@ After deployment, you'll need to configure your blog through environment variabl
 
 These can be configured via environment variables or through the admin panel after logging in:
 
-| Variable                  | Description           | Default             |
-| ------------------------- | --------------------- | ------------------- |
-| `NUXT_PUBLIC_NAME`        | Your blog name        | `NuxtPress`         |
-| `NUXT_PUBLIC_DESCRIPTION` | Blog description      | `My NuxtPress blog` |
-| `NUXT_PUBLIC_AUTHOR`      | Author name           | `Gregory Mitchell`  |
-| `NUXT_PUBLIC_THEME_COLOR` | Theme color (hex)     | `#1e40af`           |
-| `NUXT_PUBLIC_FAVICON`     | Favicon URL           | `/_favicon.ico`     |
-| `NUXT_PUBLIC_FAVICON_PNG` | PNG favicon URL       | `/_favicon.png`     |
-| `NUXT_PUBLIC_GITHUB`      | GitHub profile URL    | _(empty)_           |
-| `NUXT_PUBLIC_INSTAGRAM`   | Instagram profile URL | _(empty)_           |
-| `NUXT_PUBLIC_TWITTER`     | Twitter/X profile URL | _(empty)_           |
-| `NUXT_PUBLIC_PATREON`     | Patreon profile URL   | _(empty)_           |
+| Variable                    | Description            | Default                       |
+| --------------------------- | ---------------------- | ----------------------------- |
+| `NUXT_PUBLIC_SITE_URL`      | Your blog's public URL | `https://nuxtpress.pages.dev` |
+| `NUXT_PUBLIC_NAME`          | Your blog name         | `NuxtPress`                   |
+| `NUXT_PUBLIC_DESCRIPTION`   | Blog description       | `My NuxtPress blog`           |
+| `NUXT_PUBLIC_AUTHOR`        | Author name            | `Gregory Mitchell`            |
+| `NUXT_PUBLIC_THEME_COLOR`   | Theme color (hex)      | `#1e40af`                     |
+| `NUXT_PUBLIC_FAVICON`       | Favicon URL            | `/_favicon.ico`               |
+| `NUXT_PUBLIC_FAVICON_PNG`   | PNG favicon URL        | `/_favicon.png`               |
+| `NUXT_PUBLIC_GITHUB`        | GitHub profile URL     | _(empty)_                     |
+| `NUXT_PUBLIC_INSTAGRAM`     | Instagram profile URL  | _(empty)_                     |
+| `NUXT_PUBLIC_TWITTER`       | Twitter/X profile URL  | _(empty)_                     |
+| `NUXT_PUBLIC_PATREON`       | Patreon profile URL    | _(empty)_                     |
+| `NUXT_PUBLIC_LINKEDIN`      | LinkedIn profile URL   | _(empty)_                     |
+| `NUXT_PUBLIC_DISCORD`       | Discord server URL     | _(empty)_                     |
+| `NUXT_PUBLIC_SUPPORT_EMAIL` | Support email address  | _(empty)_                     |
 
 **How to set environment variables in NuxtHub:**
 
@@ -96,6 +101,73 @@ These can be configured via environment variables or through the admin panel aft
 2. Navigate to Settings → Environment Variables
 3. Add your variables
 4. Redeploy your application
+
+### Installing updates from the template
+
+If you used this repository as a template and want to pull updates from the original template repository, you can add the template as a remote and merge updates into your repository. The following snippet shows the minimal commands you may use.
+
+```bash
+# one time
+git remote add template https://github.com/gmitch215/nuxtpress
+
+# to install an update
+git switch master
+git fetch --all
+git merge template --allow-unrelated-histories -m "chore: merge upstream"
+```
+
+Notes:
+
+- The first `git remote add` only needs to be run once per cloned repository.
+- Switch to the branch you want to update (here `master`) before merging.
+- `--allow-unrelated-histories` is included to allow merging between repositories that do not share history; resolve conflicts if they appear.
+- Always create a local backup branch before merging so you can recover easily if something goes wrong:
+
+```bash
+git switch -c before-template-merge
+```
+
+Examples for targeting a specific branch, tag, or commit
+
+- Merge a specific branch from the template (e.g. `experimental`):
+
+```bash
+git fetch template
+git switch master
+git merge template/experimental --allow-unrelated-histories -m "chore: merge template/experimental"
+```
+
+- Merge a specific tag from the template (e.g. `v1.0.2`):
+
+```bash
+git fetch --tags template
+git switch master
+git merge template/v1.0.2 --allow-unrelated-histories -m "chore: merge template v1.0.2"
+```
+
+If you prefer to create a local branch that mirrors the tagged state, you can do:
+
+```bash
+git fetch --tags template
+git checkout -b update-v1.0.2 template/v1.0.2
+# Inspect changes, then merge into master if desired
+git switch master
+git merge update-v1.0.2
+```
+
+- Apply a single commit from the template (e.g. `ab12ef3`):
+
+```bash
+git fetch template
+git switch master
+git cherry-pick ab12ef3
+```
+
+Alternatives and safety tips:
+
+- Instead of merging directly into `master`, consider creating a temporary update branch (`git switch -c update-from-template`) and test there before merging to your main branch.
+- If the template remote is updated frequently, run `git fetch template` to refresh refs before merging.
+- If you encounter conflicts, resolve them and then `git commit` to complete the merge.
 
 ### Using Your Blog
 
@@ -327,7 +399,10 @@ Get current blog settings (public endpoint).
 	"github": "https://github.com/username",
 	"twitter": "https://twitter.com/username",
 	"instagram": "https://instagram.com/username",
-	"patreon": "https://patreon.com/username"
+	"patreon": "https://patreon.com/username",
+	"linkedin": "https://linkedin.com/in/username",
+	"discord": "https://discord.gg/server-invite",
+	"supportEmail": "support@example.com"
 }
 ```
 
