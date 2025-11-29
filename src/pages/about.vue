@@ -21,6 +21,4 @@
 
 <script setup lang="ts">
 const { settings } = useSettings();
-
-const { count: totalPosts } = await $fetch<{ count: number }>('/api/blog/count');
 </script>
