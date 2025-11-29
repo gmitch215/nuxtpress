@@ -31,6 +31,7 @@ export const settingsSchema = z.object({
 		.optional(),
 	favicon: z.string().optional(),
 	faviconPng: z.string().optional(),
+	website: z.url('Must be a valid URL').optional().or(z.literal('')),
 	github: z.string().optional(),
 	twitter: z.string().optional(),
 	instagram: z.string().optional(),

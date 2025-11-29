@@ -12,6 +12,7 @@ export default defineEventHandler(async (_) => {
 	const favicon = (await kv.get<string>('nuxtpress:setting:favicon')) || config.public.favicon;
 	const faviconPng =
 		(await kv.get<string>('nuxtpress:setting:favicon_png')) || config.public.faviconPng;
+	const website = (await kv.get<string>('nuxtpress:setting:website')) || config.public.website;
 	const github = (await kv.get<string>('nuxtpress:setting:github')) || config.public.github;
 	const twitter = (await kv.get<string>('nuxtpress:setting:twitter')) || config.public.twitter;
 	const instagram =
@@ -30,6 +31,7 @@ export default defineEventHandler(async (_) => {
 		author,
 		favicon,
 		faviconPng,
+		website,
 		github,
 		twitter,
 		instagram,

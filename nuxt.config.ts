@@ -16,6 +16,7 @@ export default defineNuxtConfig({
 			themeColor: process.env.NUXT_PUBLIC_THEME_COLOR || '#1e40af',
 			favicon: process.env.NUXT_PUBLIC_FAVICON || '/_favicon.ico',
 			faviconPng: process.env.NUXT_PUBLIC_FAVICON_PNG || '/_favicon.png',
+			website: process.env.NUXT_PUBLIC_WEBSITE || '',
 			github: process.env.NUXT_PUBLIC_GITHUB || '',
 			instagram: process.env.NUXT_PUBLIC_INSTAGRAM || '',
 			twitter: process.env.NUXT_PUBLIC_TWITTER || '',

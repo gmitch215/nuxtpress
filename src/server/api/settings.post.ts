@@ -14,6 +14,7 @@ export default defineEventHandler(async (event) => {
 		themeColor,
 		favicon,
 		faviconPng,
+		website,
 		github,
 		twitter,
 		instagram,
@@ -112,6 +113,19 @@ export default defineEventHandler(async (event) => {
 					'Favicon PNG must be a valid URL, relative path (starting with /), or data URI'
 			});
 		}
+	}
+
+	if (website) {
+		// Validate website URL - must start with http:// or https://
+		const urlPattern = /^(https?:\/\/)/;
+		if (!urlPattern.test(website)) {
+			throw createError({
+				statusCode: 400,
+				statusMessage: 'Website must start with http:// or https://'
+			});
+		}
+
+		await kv.set('nuxtpress:setting:website', website);
 	}
 
 	if (github) {

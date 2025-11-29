@@ -56,6 +56,16 @@
 					:style="`color: ${settings.themeColor || $config.public.themeColor || '#ffffff'}`"
 				>
 					<NuxtLink
+						v-if="settings.website || $config.public.website"
+						:to="`${settings.website || $config.public.website}`"
+						target="_blank"
+					>
+						<UIcon
+							name="mdi:web"
+							class="size-5 sm:size-6"
+						/>
+					</NuxtLink>
+					<NuxtLink
 						v-if="settings.github || $config.public.github"
 						:to="`https://github.com/${settings.github || $config.public.github}`"
 						target="_blank"

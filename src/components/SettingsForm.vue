@@ -189,6 +189,20 @@
 
 			<div class="space-y-4">
 				<UFormField
+					label="Website"
+					name="website"
+					help="Your personal website URL"
+				>
+					<UInput
+						v-model="state.website"
+						placeholder="https://example.com"
+						class="w-full"
+						:disabled="loading"
+						icon="mdi:web"
+					/>
+				</UFormField>
+
+				<UFormField
 					label="GitHub"
 					name="github"
 				>
@@ -430,6 +444,7 @@ const state = reactive<SettingsInput>({
 	themeColor: '',
 	favicon: '',
 	faviconPng: '',
+	website: '',
 	github: '',
 	twitter: '',
 	instagram: '',
@@ -460,6 +475,15 @@ const isValidUrl = (value: string, allowedHosts: string[]): boolean => {
 };
 
 // Computed properties for social media URLs
+const websiteUrl = computed(() => {
+	if (!state.website) return '';
+	const allowedHosts = ['example.com', 'myblog.com'];
+	if (isValidUrl(state.website, allowedHosts)) {
+		return state.website.startsWith('http') ? state.website : `https://${state.website}`;
+	}
+	return '';
+});
+
 const githubUrl = computed(() => {
 	if (!state.github) return '';
 	const allowedHosts = ['github.com'];

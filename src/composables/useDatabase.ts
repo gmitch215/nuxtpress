@@ -107,6 +107,7 @@ export function useSettings() {
 		themeColor?: string;
 		favicon?: string;
 		faviconPng?: string;
+		website?: string;
 		github?: string;
 		twitter?: string;
 		instagram?: string;
