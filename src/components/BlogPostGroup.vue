@@ -3,7 +3,9 @@
 		<UBlogPosts
 			:posts="displayed"
 			:orientation="$viewport.isLessOrEquals('mobileMedium') ? 'vertical' : 'horizontal'"
+			class="mb-4"
 		/>
+		<span class="text-gray-500 light:text-gray-400">{{ displayed.length }} total post(s)</span>
 	</div>
 </template>
 
