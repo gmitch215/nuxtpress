@@ -1,31 +1,58 @@
 <template>
 	<div
 		id="navbar"
-		class="border-b-2 border-b-black p-4 flex items-center bg-accented/60 light:bg-accented"
+		class="border-b-2 border-b-black py-4 sm:px-4 flex items-center bg-accented/60 light:bg-accented"
 	>
 		<div class="flex items-center justify-center w-full sm:px-2">
-			<NuxtLink to="/">
-				<NuxtImg
-					src="/favicon.png"
-					alt="Logo"
-					class="min-w-4 w-8 h-auto lg:w-10 xl:w-12 inline-block mr-2 hover:scale-105 transition-transform duration-300"
-				/>
-			</NuxtLink>
 			<div
-				class="flex items-center justify-center mr-12 space-x-2 md:space-x-4 lg:space-x-8 xl:space-x-16"
+				class="flex items-center justify-center sm:mr-12 space-x-2 md:space-x-4 lg:space-x-8 xl:space-x-16"
 			>
-				<NuxtLink
-					to="/"
-					class="ml-2 text-xs sm:text-sm md:text-md lg:text-lg xl:text-xl font-semibold"
-					>{{ settings.name || $config.public.name }}</NuxtLink
-				>
-				<span class="text-xs md:text-sm lg:text-lg whitespace-nowrap">{{
-					settings.description || $config.public.description
-				}}</span>
+				<div class="flex flex-col text-center sm:text-left sm:flex-row justify-center items-center">
+					<NuxtLink to="/">
+						<NuxtImg
+							src="/favicon.png"
+							alt="Logo"
+							class="min-w-4 w-8 h-auto lg:w-10 xl:w-12 inline-block mr-2 hover:scale-105 transition-transform duration-300"
+						/>
+					</NuxtLink>
+					<NuxtLink
+						to="/"
+						class="ml-2 mr-2 sm:mr-4 lg:mr-8 xl:mr-12 text-xs md:text-md lg:text-lg xl:text-xl font-semibold"
+						>{{ settings.name || $config.public.name }}</NuxtLink
+					>
+					<span class="text-xs md:text-sm lg:text-lg whitespace-nowrap mr-2 sm:mr-6">{{
+						settings.description || $config.public.description
+					}}</span>
+				</div>
+
+				<div class="grid grid-cols-2 gap-1 sm:space-y-0 sm:flex sm:space-x-2 mr-2">
+					<UButton
+						icon="mdi:home"
+						to="/"
+						title="Home"
+						variant="subtle"
+						color="neutral"
+					/>
+					<SearchButton />
+					<UButton
+						icon="mdi:tag-search"
+						to="/tags"
+						title="Search by Tags"
+						variant="subtle"
+						color="neutral"
+					/>
+					<UButton
+						icon="mdi:account-badge"
+						to="/about"
+						title="About Page"
+						variant="subtle"
+						color="neutral"
+					/>
+				</div>
 			</div>
 			<div class="ml-auto">
 				<div
-					class="flex space-x-4 light:opacity-70"
+					class="grid grid-cols-4 sm:flex items-center space-x-2 sm:space-x-3 md:space-x-4 light:opacity-70"
 					:style="`color: ${settings.themeColor || $config.public.themeColor || '#ffffff'}`"
 				>
 					<NuxtLink
@@ -35,7 +62,7 @@
 					>
 						<UIcon
 							name="cib:github"
-							class="size-4 sm:size-5 md:size-6"
+							class="size-5 sm:size-6"
 						/>
 					</NuxtLink>
 					<NuxtLink
@@ -45,7 +72,7 @@
 					>
 						<UIcon
 							name="cib:twitter"
-							class="size-4 sm:size-5 md:size-6"
+							class="size-5 sm:size-6"
 						/>
 					</NuxtLink>
 					<NuxtLink
@@ -55,7 +82,7 @@
 					>
 						<UIcon
 							name="cib:instagram"
-							class="size-4 sm:size-5 md:size-6"
+							class="size-5 sm:size-6"
 						/>
 					</NuxtLink>
 					<NuxtLink
@@ -65,7 +92,7 @@
 					>
 						<UIcon
 							name="cib:patreon"
-							class="size-4 sm:size-5 md:size-6"
+							class="size-5 sm:size-6"
 						/>
 					</NuxtLink>
 					<NuxtLink
@@ -75,7 +102,7 @@
 					>
 						<UIcon
 							name="cib:linkedin"
-							class="size-4 sm:size-5 md:size-6"
+							class="size-5 sm:size-6"
 						/>
 					</NuxtLink>
 					<NuxtLink
@@ -85,7 +112,7 @@
 					>
 						<UIcon
 							name="cib:discord"
-							class="size-4 sm:size-5 md:size-6"
+							class="size-5 sm:size-6"
 						/>
 					</NuxtLink>
 					<NuxtLink
@@ -95,7 +122,7 @@
 					>
 						<UIcon
 							name="mdi:email-outline"
-							class="size-4 sm:size-5 md:size-6"
+							class="size-5 sm:size-6"
 						/>
 					</NuxtLink>
 				</div>

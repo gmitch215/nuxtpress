@@ -84,7 +84,8 @@
 			</ClientOnly>
 			<footer class="pt-8 border-t border-gray-200 dark:border-gray-800">
 				<div class="text-sm text-gray-500 dark:text-gray-400">
-					Last updated: {{ formatDate(post.updated_at) }}
+					Post by {{ settings.author || $config.public.author }} | Last updated:
+					{{ formatDate(post.updated_at) }}
 				</div>
 			</footer>
 		</div>
@@ -110,7 +111,7 @@
 
 <script setup lang="ts">
 import DOMPurify from 'dompurify';
-import type { BlogPost } from '~/shared/types';
+import { formatDate, type BlogPost } from '~/shared/types';
 
 const { settings } = useSettings();
 const { loggedIn } = useLogin();
@@ -196,14 +197,6 @@ const renderedContent = computed(() => {
 		return '<p class="text-red-500">Error rendering content</p>';
 	}
 });
-
-const formatDate = (date: Date) => {
-	return new Date(date).toLocaleDateString('en-US', {
-		year: 'numeric',
-		month: 'long',
-		day: 'numeric'
-	});
-};
 
 onBeforeUnmount(() => {
 	if (thumbnailUrl.value && post.value?.thumbnail) {
