@@ -81,6 +81,9 @@
 					class="prose prose-lg dark:prose-invert max-w-none"
 					v-html="renderedContent"
 				/>
+				<template #fallback>
+					<div class="text-gray-500 dark:text-gray-400">Loading content...</div>
+				</template>
 			</ClientOnly>
 			<footer class="pt-8 border-t border-gray-200 dark:border-gray-800">
 				<div class="text-sm text-gray-500 dark:text-gray-400">
@@ -125,6 +128,25 @@ const { year, month, day, slug } = route.params;
 const year0 = parseInt(year?.toString() || '0', 10);
 const month0 = parseInt(month?.toString() || '0', 10);
 const day0 = parseInt(day?.toString() || '0', 10);
+const slug0 = computed(() => {
+	let slug0 = slug?.toString() || '';
+
+	// Remove .html and .htm extension if present
+	if (slug0.endsWith('.html')) {
+		slug0 = slug0.slice(0, -5);
+	} else if (slug0.endsWith('.htm')) {
+		slug0 = slug0.slice(0, -4);
+	}
+
+	// Decode URL-encoded characters
+	try {
+		slug0 = decodeURIComponent(slug0);
+	} catch (e) {
+		// If decoding fails, keep the original slug
+	}
+
+	return slug0;
+});
 
 // Basic validation without throwing errors
 const isValidDate =
@@ -139,13 +161,13 @@ const isValidDate =
 	day0 <= 31;
 
 const { data: post, error } = await useAsyncData(
-	`blog-post-${slug}-${year0}-${month0}-${day0}`,
+	`blog-post-${slug0.value}-${year0}-${month0}-${day0}`,
 	async () => {
 		if (!isValidDate) return null;
 
 		try {
 			const res = await $fetch<BlogPost>(
-				`/api/blog/find?slug=${slug}&year=${year0}&month=${month0}&day=${day0}`,
+				`/api/blog/find?slug=${slug0.value}&year=${year0}&month=${month0}&day=${day0}`,
 				{
 					method: 'GET'
 				}
