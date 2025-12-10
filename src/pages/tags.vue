@@ -47,6 +47,16 @@
 
 <script setup lang="ts">
 const { posts, fetchPosts } = useBlogPosts();
+const { settings } = useSettings();
+const config = useRuntimeConfig();
+
+const name = settings.value.name || config.public.name;
+useSeoMeta({
+	title: `Tags - ${name}`,
+	description: `Browse blog posts by tags at ${name}.`,
+	ogTitle: `Tags - ${name}`,
+	ogDescription: `Browse blog posts by tags at ${name}.`
+});
 
 const tags = computed(() => {
 	const tagSet = new Set<string>();

@@ -21,4 +21,13 @@
 
 <script setup lang="ts">
 const { settings } = useSettings();
+const config = useRuntimeConfig();
+
+const name = settings.value.name || config.public.name;
+useSeoMeta({
+	title: `About - ${name}`,
+	description: `Learn more about ${settings.value.author || config.public.author} and the ${name} blog.`,
+	ogTitle: `About - ${name}`,
+	ogDescription: `Learn more about ${settings.value.author || config.public.author} and the ${name} blog.`
+});
 </script>

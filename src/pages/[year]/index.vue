@@ -54,6 +54,8 @@
 <script setup lang="ts">
 const { posts, fetchPosts } = useBlogPosts();
 const route = useRoute();
+const { settings } = useSettings();
+const config = useRuntimeConfig();
 
 const year = parseInt(route.params.year?.toString() || '0', 10);
 if (isNaN(year)) {
@@ -71,6 +73,12 @@ if (year < 2000 || year > new Date().getUTCFullYear()) {
 		message: 'The requested year is not valid or out of range.'
 	});
 }
+
+const name = settings.value.name || config.public.name;
+useSeoMeta({
+	title: `Posts from ${year} - ${name}`,
+	description: `Read blog posts published in ${year} at ${name}.`
+});
 
 const filteredPosts = computed(() => {
 	return posts.value.filter((post) => {

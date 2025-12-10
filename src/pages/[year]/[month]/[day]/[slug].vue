@@ -117,6 +117,7 @@ import DOMPurify from 'dompurify';
 import { formatDate, type BlogPost } from '~/shared/types';
 
 const { settings } = useSettings();
+const config = useRuntimeConfig();
 const { loggedIn } = useLogin();
 const editorOpen = ref(false);
 
@@ -218,6 +219,20 @@ const renderedContent = computed(() => {
 		console.error('Markdown rendering error:', e);
 		return '<p class="text-red-500">Error rendering content</p>';
 	}
+});
+
+const name = settings.value.name || config.public.name;
+useSeoMeta({
+	title: `${name} | ${post?.value.title || 'Blog Post'}`,
+	description:
+		post?.value.content.slice(0, 260).replace(/\n/g, ' ') ||
+		settings.value.description ||
+		config.public.description,
+	ogTitle: `${name} | ${post?.value.title || 'Blog Post'}`,
+	ogDescription:
+		post?.value.content.slice(0, 260).replace(/\n/g, ' ') ||
+		settings.value.description ||
+		config.public.description
 });
 
 onBeforeUnmount(() => {

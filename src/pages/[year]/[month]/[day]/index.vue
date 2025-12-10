@@ -41,6 +41,8 @@
 
 <script setup lang="ts">
 const { posts, fetchPosts } = useBlogPosts();
+const { settings } = useSettings();
+const config = useRuntimeConfig();
 const route = useRoute();
 
 const year = parseInt(route.params.year?.toString() || '0', 10);
@@ -95,6 +97,14 @@ const monthName = computed(() => {
 		'December'
 	];
 	return monthNames[month - 1] || 'Unknown';
+});
+
+const name = settings.value.name || config.public.name;
+useSeoMeta({
+	title: `Posts from ${monthName.value} ${day}, ${year} - ${name}`,
+	description: `Read blog posts published on ${monthName.value} ${day}, ${year} at ${name}.`,
+	ogTitle: `Posts from ${monthName.value} ${day}, ${year} - ${name}`,
+	ogDescription: `Read blog posts published on ${monthName.value} ${day}, ${year} at ${name}.`
 });
 
 const filteredPosts = computed(() => {
