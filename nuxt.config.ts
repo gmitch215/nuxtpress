@@ -69,6 +69,7 @@ export default defineNuxtConfig({
 		'nuxt-viewport',
 		'@nuxtjs/robots',
 		'@nuxtjs/sitemap',
+		'nuxt-schema-org',
 		'@nuxt/image',
 		[
 			'@nuxtjs/google-fonts',

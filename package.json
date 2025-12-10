@@ -31,6 +31,7 @@
     "luxon": "^3.7.2",
     "marked": "^17.0.1",
     "nuxt": "^4.2.0",
+    "nuxt-schema-org": "^5.0.9",
     "nuxt-viewport": "^2.3.1",
     "xmlbuilder2": "^4.0.1",
     "zod": "^4.1.12"

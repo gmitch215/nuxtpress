@@ -64,4 +64,23 @@ useHead({
 		}
 	]
 });
+
+useSchemaOrg([
+	defineWebSite({
+		name: settings.value.name || config.public.name,
+		url: config.public.site_url,
+		image: {
+			'@type': 'ImageObject',
+			url: config.public.site_url + '/favicon.png'
+		},
+		publisher: {
+			'@type': 'Organization',
+			name: settings.value.name || config.public.name,
+			logo: {
+				'@type': 'ImageObject',
+				url: config.public.site_url + '/favicon.png'
+			}
+		}
+	})
+]);
 </script>

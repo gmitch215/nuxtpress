@@ -260,6 +260,22 @@ useHead({
 	]
 });
 
+useSchemaOrg([
+	defineWebPage({
+		name: `${name} | ${post?.value.title || 'Blog Post'}`,
+		description:
+			post?.value.content.slice(0, 360).replace(/\n/g, ' ') ||
+			settings.value.description ||
+			config.public.description,
+		image: thumbnailUrl.value
+			? {
+					'@type': 'ImageObject',
+					url: thumbnailUrl.value
+				}
+			: undefined
+	})
+]);
+
 onBeforeUnmount(() => {
 	if (thumbnailUrl.value && post.value?.thumbnail) {
 		URL.revokeObjectURL(thumbnailUrl.value);
