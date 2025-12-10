@@ -235,6 +235,31 @@ useSeoMeta({
 		config.public.description
 });
 
+useHead({
+	meta: [
+		{
+			property: 'citation_title',
+			content: post?.value.title || ''
+		},
+		{
+			property: 'citation_author',
+			content: settings.value.author || config.public.author || ''
+		},
+		{
+			property: 'citation_publication_date',
+			content: post
+				? `${post.value.created_at.getUTCFullYear()}/${(post.value.created_at.getUTCMonth() + 1)
+						.toString()
+						.padStart(2, '0')}/${post.value.created_at.getUTCDate().toString().padStart(2, '0')}`
+				: ''
+		},
+		{
+			property: 'citation_keywords',
+			content: post?.value.tags.join(', ') || ''
+		}
+	]
+});
+
 onBeforeUnmount(() => {
 	if (thumbnailUrl.value && post.value?.thumbnail) {
 		URL.revokeObjectURL(thumbnailUrl.value);
