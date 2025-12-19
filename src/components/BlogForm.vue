@@ -149,7 +149,7 @@
 				type="submit"
 				icon="mdi:content-save"
 				:loading="loading"
-				:disabled="loading"
+				:disabled="loading || state.content.length < 50"
 			>
 				{{ mode === 'edit' ? 'Update Post' : 'Create Post' }}
 			</UButton>
