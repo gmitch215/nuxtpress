@@ -64,7 +64,10 @@
 				<NuxtImg
 					:src="thumbnailUrl"
 					:alt="post.title"
-					class="w-full h-auto rounded-lg shadow-lg object-cover max-h-96"
+					loading="lazy"
+					fit="cover"
+					preload
+					class="w-full h-auto rounded-lg shadow-lg max-h-96"
 				/>
 			</div>
 
@@ -223,12 +226,12 @@ const renderedContent = computed(() => {
 
 const name = settings.value.name || config.public.name;
 useSeoMeta({
-	title: `${name} | ${post?.value.title || 'Blog Post'}`,
+	title: `${post?.value.title || 'Blog Post'} | ${name}`,
 	description:
 		post?.value.content.slice(0, 260).replace(/\n/g, ' ') ||
 		settings.value.description ||
 		config.public.description,
-	ogTitle: `${name} | ${post?.value.title || 'Blog Post'}`,
+	ogTitle: `${post?.value.title || 'Blog Post'} | ${name}`,
 	ogDescription:
 		post?.value.content.slice(0, 260).replace(/\n/g, ' ') ||
 		settings.value.description ||
