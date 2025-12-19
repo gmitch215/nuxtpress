@@ -74,14 +74,42 @@
 		v-if="loggedIn"
 		v-model:open="newPostOpen"
 		title="Create New Blog Post"
-		class="max-w-[90vw] w-full"
+		:class="newPostFullscreen ? 'w-screen h-screen max-w-none! max-h-none!' : 'max-w-[90vw] w-full'"
 	>
+		<template #header>
+			<div class="flex items-center justify-between w-full">
+				<h3 class="text-lg font-semibold">Create New Blog Post</h3>
+				<div class="flex space-x-2">
+					<UButton
+						:icon="newPostFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'"
+						color="neutral"
+						variant="ghost"
+						:title="newPostFullscreen ? 'Exit Fullscreen' : 'Fullscreen'"
+						@click="newPostFullscreen = !newPostFullscreen"
+					/>
+					<UButton
+						icon="mdi:close"
+						color="neutral"
+						variant="ghost"
+						title="Close"
+						@click="
+							newPostOpen = false;
+							newPostFullscreen = false;
+						"
+					/>
+				</div>
+			</div>
+		</template>
 		<template #body>
 			<BlogForm
 				mode="create"
-				@cancel="newPostOpen = false"
+				@cancel="
+					newPostOpen = false;
+					newPostFullscreen = false;
+				"
 				@submit="
 					newPostOpen = false;
+					newPostFullscreen = false;
 					refreshPosts();
 				"
 			/>
@@ -110,6 +138,7 @@ const { fetchSettings } = useSettings();
 const loginOpen = ref(false);
 const newPostOpen = ref(false);
 const settingsOpen = ref(false);
+const newPostFullscreen = ref(false);
 
 const refreshing = ref(false);
 async function refreshPosts() {
