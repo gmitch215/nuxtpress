@@ -40,6 +40,14 @@ export default defineNuxtConfig({
 		},
 		build: {
 			cssMinify: 'lightningcss'
+		},
+		optimizeDeps: {
+			include: [
+				'prosemirror-state',
+				'prosemirror-view',
+				'prosemirror-model',
+				'prosemirror-transform'
+			]
 		}
 	},
 	hub: {
@@ -76,7 +84,11 @@ export default defineNuxtConfig({
 			{
 				families: {
 					'Noto+Sans': true
-				}
+				},
+				display: 'swap',
+				preload: true,
+				prefetch: true,
+				preconnect: true
 			}
 		],
 		[
@@ -90,6 +102,27 @@ export default defineNuxtConfig({
 			}
 		]
 	],
+	image: {
+		quality: 85,
+		format: ['webp', 'avif'],
+		screens: {
+			xs: 320,
+			sm: 640,
+			md: 768,
+			lg: 1024,
+			xl: 1280,
+			xxl: 1536
+		},
+		presets: {
+			thumbnail: {
+				modifiers: {
+					format: 'webp',
+					quality: 85,
+					fit: 'cover'
+				}
+			}
+		}
+	},
 	routeRules: {
 		'/_ipx/**': {
 			headers: {

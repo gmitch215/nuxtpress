@@ -4,6 +4,9 @@
 			:posts="displayed"
 			:orientation="$viewport.isLessOrEquals('mobileMedium') ? 'vertical' : 'horizontal'"
 			class="mb-4"
+			:ui="{
+				image: 'aspect-2/1 object-cover w-full h-full'
+			}"
 		/>
 		<ClientOnly>
 			<span class="text-gray-500 light:text-gray-400">{{ displayed.length }} total post(s)</span>
@@ -41,17 +44,26 @@ const stripHtml = (html: string): string => {
 
 const imageBlobs: string[] = [];
 const displayed = computed(() =>
-	props.posts.map((post: BlogPost) => {
-		let image: string;
+	props.posts.map((post: BlogPost, index: number) => {
+		let image: string | (Partial<HTMLImageElement> & { [key: string]: any });
 
 		if (post.thumbnail_url) {
 			image = post.thumbnail_url;
 		} else if (post.thumbnail) {
 			const array = new Uint8Array(post.thumbnail);
-			image = URL.createObjectURL(new Blob([array]));
-			imageBlobs.push(image);
+			const blobUrl = URL.createObjectURL(new Blob([array]));
+			imageBlobs.push(blobUrl);
+			image = blobUrl;
 		} else {
 			image = '/favicon.png';
+		}
+
+		if (index < 2 && typeof image === 'string') {
+			image = {
+				src: image,
+				loading: 'eager',
+				fetchPriority: 'high'
+			};
 		}
 
 		const date = new Date(post.created_at);

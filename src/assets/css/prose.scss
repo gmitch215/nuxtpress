@@ -13,6 +13,11 @@
 }
 
 @layer utilities {
+	.prose {
+		contain: layout style paint;
+		content-visibility: auto;
+	}
+
 	.prose h1 {
 		@apply mt-8 mb-4 text-4xl font-bold;
 	}
@@ -80,6 +85,9 @@
 
 	.prose img {
 		@apply my-4 rounded underline;
+		/* Prevent layout shift */
+		height: auto;
+		max-width: 100%;
 	}
 
 	.prose table {

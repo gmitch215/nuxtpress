@@ -64,10 +64,11 @@
 				<NuxtImg
 					:src="thumbnailUrl"
 					:alt="post.title"
-					loading="lazy"
 					fit="cover"
-					preload
-					class="w-full h-auto rounded-lg shadow-lg max-h-96"
+					:preload="{ fetchPriority: 'high' }"
+					format="webp"
+					quality="85"
+					class="w-full h-auto rounded-lg shadow-lg min-h-50 max-h-96 object-cover"
 				/>
 			</div>
 
@@ -83,6 +84,7 @@
 				<div
 					class="prose prose-lg dark:prose-invert max-w-none"
 					v-html="renderedContent"
+					style="contain-intrinsic-size: auto 500px"
 				/>
 				<template #fallback>
 					<div class="text-gray-500 dark:text-gray-400">Loading content...</div>
@@ -212,7 +214,16 @@ const thumbnailUrl = computed(() => {
 
 const renderedContent = computed(() => {
 	if (!post.value?.content) return '';
-	if (import.meta.server) return ''; // Don't render on server - only client-side with DOMPurify
+
+	// Render initial content preview on server for better LCP
+	if (import.meta.server) {
+		const { renderMarkdown } = useMarkdown();
+		// Render first ~1000 chars on server for initial paint
+		const preview = post.value.content.slice(0, 1000);
+		return (
+			renderMarkdown(preview) + '<div class="text-gray-400 italic">Loading full content...</div>'
+		);
+	}
 
 	try {
 		const { renderMarkdown } = useMarkdown();
@@ -260,7 +271,17 @@ useHead({
 			property: 'citation_keywords',
 			content: post?.value.tags.join(', ') || ''
 		}
-	]
+	],
+	link: thumbnailUrl.value
+		? [
+				{
+					rel: 'preload',
+					as: 'image',
+					href: thumbnailUrl.value,
+					fetchpriority: 'high'
+				}
+			]
+		: undefined
 });
 
 useSchemaOrg([

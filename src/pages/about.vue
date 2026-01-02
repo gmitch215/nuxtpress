@@ -6,6 +6,9 @@
 				src="/favicon.png"
 				alt="Author Avatar"
 				class="rounded-full mb-4 size-16 sm:size-20 md:size-24 lg:size-32 mx-auto"
+				loading="eager"
+				:preload="{ fetchPriority: 'high' }"
+				format="webp"
 			/>
 			<p class="text-md md:text-lg leading-relaxed">
 				{{
