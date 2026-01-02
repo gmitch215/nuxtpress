@@ -4,7 +4,7 @@
 			v-slot="{ editor }"
 			v-model="localContent"
 			:extensions="[
-				// Emoji.configure({ enableEmoticons: true }),
+				Emoji.configure({ enableEmoticons: true }),
 				TextAlign.configure({ types: ['heading', 'paragraph'] })
 			]"
 			content-type="markdown"
@@ -18,17 +18,17 @@
 				class="sm:px-8 mb-2 overflow-x-auto"
 			/>
 			<UEditorDragHandle :editor="editor" />
-			<!-- <UEditorEmojiMenu
+			<UEditorEmojiMenu
 				:editor="editor"
 				:items="gitHubEmojis.filter((emoji) => !emoji.name.startsWith('regional_indicator_'))"
-			/> -->
+			/>
 		</UEditor>
 	</div>
 </template>
 
 <script setup lang="ts">
 import type { EditorToolbarItem } from '@nuxt/ui';
-// import { Emoji, gitHubEmojis } from '@tiptap/extension-emoji';
+import { Emoji, gitHubEmojis } from '@tiptap/extension-emoji';
 import { TextAlign } from '@tiptap/extension-text-align';
 
 const props = defineProps<{
