@@ -1,12 +1,11 @@
 {
   "private": true,
   "name": "nuxtpress",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "bunx nuxi dev --no-restart --public --port 8787",
     "dev:test": "bunx nuxi dev --no-restart --public --port 8787 --dotenv .config/test.env",
-    "preview": "bunx nuxthub preview",
     "build": "nuxt build",
     "postinstall": "nuxt prepare",
     "prettier": "bunx prettier --write .",
