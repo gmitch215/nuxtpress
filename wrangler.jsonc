@@ -1,0 +1,23 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"migrations_table": "_hub_migrations",
+			"migrations_dir": ".output/server/db/migrations/"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "BLOB"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "KV"
+		},
+		{
+			"binding": "CACHE"
+		}
+	]
+}
