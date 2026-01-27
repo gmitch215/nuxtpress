@@ -1,11 +1,11 @@
 import hljs from 'highlight.js';
+import { kv } from 'hub:kv';
 import { marked } from 'marked';
 import { create } from 'xmlbuilder2';
 import { BlogPost } from '~/shared/types';
 
 export default defineEventHandler(async (event) => {
 	const config = useRuntimeConfig();
-	const kv = hubKV();
 
 	const feed = await kv.get<string>('nuxtpress:feed_xml');
 	if (feed) {
@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
 		const updatedAt = new Date(post.updated_at) || new Date(post.created_at);
 		return updatedAt.getTime() > latest.getTime() ? updatedAt : latest;
 	}, new Date(0)); // find latest updated_at
-	const url = config.public.site_url || config.hub.remote || 'http://localhost:8787';
+	const url = config.public.site_url || 'http://localhost:8787';
 
 	const doc = create({ version: '1.0', encoding: 'utf-8' });
 	const root = doc.ele('feed', { xmlns: 'http://www.w3.org/2005/Atom' });

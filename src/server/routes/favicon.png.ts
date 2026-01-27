@@ -1,13 +1,14 @@
+import { kv } from 'hub:kv';
+
 export default defineEventHandler(async (event) => {
-	const kv = hubKV();
 	const config = useRuntimeConfig();
 
 	const faviconPng = await kv.get<string>('nuxtpress:setting:favicon_png');
 	if (faviconPng && faviconPng.startsWith('data:')) {
 		const matches = faviconPng.match(/^data:([^;]+);base64,(.+)$/);
 		if (matches) {
-			const mimeType = matches[1];
-			const base64Data = matches[2];
+			const mimeType = matches[1]!;
+			const base64Data = matches[2]!;
 			const buffer = Buffer.from(base64Data, 'base64');
 
 			setHeader(event, 'Content-Type', mimeType);

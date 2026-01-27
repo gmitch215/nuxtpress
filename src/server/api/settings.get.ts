@@ -1,5 +1,6 @@
+import { kv } from 'hub:kv';
+
 export default defineEventHandler(async (_) => {
-	const kv = hubKV();
 	const config = useRuntimeConfig();
 
 	const name = (await kv.get<string>('nuxtpress:setting:name')) || config.public.name;

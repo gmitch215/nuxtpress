@@ -1,9 +1,9 @@
+import { kv } from 'hub:kv';
 import { ensureLoggedIn } from '../utils';
 
 export default defineEventHandler(async (event) => {
 	await ensureLoggedIn(event);
 
-	const kv = hubKV();
 	const config = useRuntimeConfig();
 
 	const {

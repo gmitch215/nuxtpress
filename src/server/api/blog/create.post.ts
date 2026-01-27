@@ -1,9 +1,14 @@
-import { checkTable, ensureLoggedIn } from '~/server/utils';
+import { and, eq, sql } from 'drizzle-orm';
+import { kv } from 'hub:kv';
+import { blogPosts } from '~/server/db/schema';
+import { ensureLoggedIn } from '~/server/utils';
+import { ensureDatabase } from '~/server/utils/db';
 import { blogPostCreateSchema } from '~/shared/schemas';
 import { type BlogPost } from '~/shared/types';
 
 export default defineEventHandler(async (event) => {
 	await ensureLoggedIn(event);
+	await ensureDatabase();
 
 	const { post } = await readBody<{ post: Omit<BlogPost, 'id' | 'created_at' | 'updated_at'> }>(
 		event
@@ -25,10 +30,6 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const db = hubDatabase();
-	const kv = hubKV();
-	checkTable(db);
-
 	// generate unique slug by checking for duplicates on the same date
 	const now = new Date();
 	const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
@@ -38,11 +39,17 @@ export default defineEventHandler(async (event) => {
 
 	while (slugExists) {
 		const existing = await db
-			.prepare(`SELECT id FROM blog_posts WHERE slug = ?1 AND DATE(created_at) = ?2`)
-			.bind(finalSlug, dateStr)
-			.first();
+			.select({ id: blogPosts.id })
+			.from(blogPosts)
+			.where(
+				and(
+					eq(blogPosts.slug, finalSlug),
+					sql`DATE(${blogPosts.createdAt} / 1000, 'unixepoch') = ${dateStr}`
+				)
+			)
+			.limit(1);
 
-		if (!existing) {
+		if (existing.length === 0) {
 			slugExists = false;
 		} else {
 			finalSlug = `${post.slug}-${counter}`;
@@ -51,50 +58,19 @@ export default defineEventHandler(async (event) => {
 	}
 
 	const id = crypto.randomUUID().replace(/-/g, '');
+	const tagsString = post.tags && post.tags.length > 0 ? post.tags.join(',') : null;
+	// Convert Uint8Array to base64 string for storage
+	const thumbnailString = post.thumbnail ? btoa(String.fromCharCode(...post.thumbnail)) : null;
 
-	await db
-		.prepare(
-			`INSERT INTO blog_posts (id, title, slug, content)
-			VALUES (?1, ?2, ?3, ?4)`
-		)
-		.bind(id, post.title, finalSlug, post.content)
-		.run();
-
-	// invalidate caches
-	await kv.del('nuxtpress:blog_posts_list');
-	if (post.thumbnail) {
-		await db
-			.prepare(
-				`UPDATE blog_posts
-			SET thumbnail = ?1, thumbnail_url = ?2
-			WHERE id = ?3`
-			)
-			.bind(post.thumbnail, post.thumbnail_url || null, id)
-			.run();
-	}
-
-	if (post.thumbnail_url && !post.thumbnail) {
-		await db
-			.prepare(
-				`UPDATE blog_posts
-			SET thumbnail_url = ?1
-			WHERE id = ?2`
-			)
-			.bind(post.thumbnail_url, id)
-			.run();
-	}
-
-	if (post.tags && post.tags.length > 0) {
-		const tagsString = post.tags.join(',');
-		await db
-			.prepare(
-				`UPDATE blog_posts
-			SET tags = ?1
-			WHERE id = ?2`
-			)
-			.bind(tagsString, id)
-			.run();
-	}
+	await db.insert(blogPosts).values({
+		id,
+		title: post.title,
+		slug: finalSlug,
+		content: post.content,
+		thumbnail: thumbnailString,
+		thumbnailUrl: post.thumbnail_url || null,
+		tags: tagsString
+	});
 
 	// Invalidate caches
 	await kv.del('nuxtpress:blog_posts_list');

@@ -1,7 +1,11 @@
-import { checkTable } from '~/server/utils';
+import { eq } from 'drizzle-orm';
+import { kv } from 'hub:kv';
+import { blogPosts } from '~/server/db/schema';
+import { ensureDatabase } from '~/server/utils/db';
 import { BlogPost } from '~/shared/types';
 
 export default defineEventHandler(async (event) => {
+	await ensureDatabase();
 	const { slug, year, month, day } = getQuery(event);
 	if (!slug || Array.isArray(slug)) {
 		throw createError({
@@ -27,7 +31,6 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const kv = hubKV();
 	const cacheKey = `nuxtpress:blog_post:${slug}:${year}:${month}:${day}`;
 
 	// Check cache first
@@ -36,31 +39,16 @@ export default defineEventHandler(async (event) => {
 		return JSON.parse(cached);
 	}
 
-	const db = hubDatabase();
-	checkTable(db);
-
 	// Get all posts with the same slug
-	const posts = await db
-		.prepare('SELECT * FROM blog_posts WHERE slug = ?1')
-		.bind(slug)
-		.all<BlogPost>()
-		.then((result) => {
-			if (!result.success) {
-				throw createError({
-					statusCode: 500,
-					statusMessage: 'Database query failed'
-				});
-			}
+	const rows = await db.select().from(blogPosts).where(eq(blogPosts.slug, slug));
 
-			return result.results.map((row) => ({
-				...row,
-				created_at: new Date(row.created_at as any),
-				updated_at: new Date(row.updated_at as any),
-				tags: (row.tags as any)
-					? (row.tags as any as string).split(',').map((t: string) => t.trim())
-					: []
-			})) as BlogPost[];
-		});
+	const posts = rows.map((row) => ({
+		...row,
+		created_at: row.createdAt,
+		updated_at: row.updatedAt,
+		thumbnail_url: row.thumbnailUrl,
+		tags: row.tags ? row.tags.split(',').map((t: string) => t.trim()) : []
+	})) as BlogPost[];
 
 	if (!posts || posts.length === 0) {
 		throw createError({

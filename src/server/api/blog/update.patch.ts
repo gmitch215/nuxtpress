@@ -1,9 +1,14 @@
-import { checkTable, ensureLoggedIn } from '~/server/utils';
+import { eq } from 'drizzle-orm';
+import { kv } from 'hub:kv';
+import { blogPosts } from '~/server/db/schema';
+import { ensureLoggedIn } from '~/server/utils';
+import { ensureDatabase } from '~/server/utils/db';
 import { blogPostUpdateSchema } from '~/shared/schemas';
 import { type BlogPost } from '~/shared/types';
 
 export default defineEventHandler(async (event) => {
 	await ensureLoggedIn(event);
+	await ensureDatabase();
 
 	const { post } = await readBody<{ post: Omit<BlogPost, 'created_at' | 'updated_at'> }>(event);
 
@@ -23,45 +28,37 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const db = hubDatabase();
-	const kv = hubKV();
-	checkTable(db);
-
 	// get the old post data for cache invalidation
-	const oldPost = await db
-		.prepare('SELECT slug, created_at FROM blog_posts WHERE id = ?1')
-		.bind(post.id)
-		.first<{ slug: string; created_at: string }>();
+	const oldPosts = await db
+		.select({ slug: blogPosts.slug, createdAt: blogPosts.createdAt })
+		.from(blogPosts)
+		.where(eq(blogPosts.id, post.id))
+		.limit(1);
+
+	const oldPost = oldPosts[0];
+
+	// Convert Uint8Array to base64 string for storage
+	const thumbnailString = post.thumbnail ? btoa(String.fromCharCode(...post.thumbnail)) : null;
 
 	await db
-		.prepare(
-			`UPDATE blog_posts SET
-				title = ?1,
-				slug = ?2,
-				content = ?3,
-				thumbnail = ?4,
-				thumbnail_url = ?5,
-				updated_at = CURRENT_TIMESTAMP,
-				tags = ?6
-				WHERE id = ?7`
-		)
-		.bind(
-			post.title,
-			post.slug,
-			post.content,
-			post.thumbnail || null,
-			post.thumbnail_url || null,
-			post.tags.join(','),
-			post.id
-		)
-		.run();
+		.update(blogPosts)
+		.set({
+			title: post.title,
+			slug: post.slug,
+			content: post.content,
+			thumbnail: thumbnailString,
+			thumbnailUrl: post.thumbnail_url || null,
+			tags: post.tags.join(','),
+			updatedAt: new Date()
+		})
+		.where(eq(blogPosts.id, post.id));
 
 	// invalidate caches
 	await kv.del('nuxtpress:blog_posts_list');
 	await kv.del(`nuxtpress:slug_exists:${post.slug}`);
 
 	if (oldPost) {
-		const oldDate = new Date(oldPost.created_at);
+		const oldDate = new Date(oldPost.createdAt);
 		const oldCacheKey = `nuxtpress:blog_post:${oldPost.slug}:${oldDate.getUTCFullYear()}:${oldDate.getUTCMonth() + 1}:${oldDate.getUTCDate()}`;
 		await kv.del(oldCacheKey);
 

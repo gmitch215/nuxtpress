@@ -1,5 +1,6 @@
+import { kv } from 'hub:kv';
+
 export default defineEventHandler(async (event) => {
-	const kv = hubKV();
 	const ip = getRequestIP(event);
 	const sessionId = ip || getCookie(event, 'admin_session_id');
 

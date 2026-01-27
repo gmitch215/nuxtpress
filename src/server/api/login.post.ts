@@ -1,3 +1,5 @@
+import { kv } from 'hub:kv';
+
 function timingSafeEqual(a: string, b: string): boolean {
 	const encoder = new TextEncoder();
 	const aBuffer = encoder.encode(a);
@@ -29,7 +31,6 @@ function timingSafeEqual(a: string, b: string): boolean {
 }
 
 export default defineEventHandler(async (event) => {
-	const kv = hubKV();
 	const { password } = await readBody(event);
 	const correct = useRuntimeConfig().password;
 

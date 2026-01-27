@@ -1,7 +1,12 @@
+import { eq } from 'drizzle-orm';
+import { kv } from 'hub:kv';
+import { blogPosts } from '~/server/db/schema';
 import { ensureLoggedIn } from '~/server/utils';
+import { ensureDatabase } from '~/server/utils/db';
 
 export default defineEventHandler(async (event) => {
 	await ensureLoggedIn(event);
+	await ensureDatabase();
 
 	const { id } = getQuery(event);
 	if (!id) {
@@ -11,16 +16,16 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const db = hubDatabase();
-	const kv = hubKV();
-
 	// Get the post data before deleting for cache invalidation
-	const post = await db
-		.prepare('SELECT slug, created_at FROM blog_posts WHERE id = ?1')
-		.bind(id)
-		.first<{ slug: string; created_at: string }>();
+	const posts = await db
+		.select({ slug: blogPosts.slug, createdAt: blogPosts.createdAt })
+		.from(blogPosts)
+		.where(eq(blogPosts.id, id as string))
+		.limit(1);
 
-	await db.prepare('DELETE FROM blog_posts WHERE id = ?1').bind(id).run();
+	const post = posts[0];
+
+	await db.delete(blogPosts).where(eq(blogPosts.id, id as string));
 
 	// Invalidate caches
 	await kv.del('nuxtpress:blog_posts_list');
@@ -28,7 +33,7 @@ export default defineEventHandler(async (event) => {
 	if (post?.slug) {
 		await kv.del(`nuxtpress:slug_exists:${post.slug}`);
 
-		const postDate = new Date(post.created_at);
+		const postDate = new Date(post.createdAt);
 		const cacheKey = `nuxtpress:blog_post:${post.slug}:${postDate.getUTCFullYear()}:${postDate.getUTCMonth() + 1}:${postDate.getUTCDate()}`;
 		await kv.del(cacheKey);
 	}

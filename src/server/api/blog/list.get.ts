@@ -1,18 +1,20 @@
-import { checkTable } from '~/server/utils';
+import { desc } from 'drizzle-orm';
+import { blogPosts } from '~/server/db/schema';
+import { ensureDatabase } from '~/server/utils/db';
 import { BlogPost } from '~/shared/types';
 
 export default defineEventHandler(async (_) => {
-	const db = hubDatabase();
-	checkTable(db);
+	await ensureDatabase();
+	const rows = await db.select().from(blogPosts).orderBy(desc(blogPosts.createdAt));
 
-	const rows = await db.prepare('SELECT * FROM blog_posts ORDER BY created_at DESC').all();
-	return rows.results.map(
-		(row: any) =>
+	return rows.map(
+		(row) =>
 			({
 				...row,
-				created_at: new Date(row.created_at as string),
-				updated_at: new Date(row.updated_at as string),
-				tags: row.tags ? (row.tags as string).split(',').map((t) => t.trim()) : []
+				created_at: row.createdAt,
+				updated_at: row.updatedAt,
+				thumbnail_url: row.thumbnailUrl,
+				tags: row.tags ? row.tags.split(',').map((t) => t.trim()) : []
 			}) satisfies BlogPost
 	) as BlogPost[];
 });
