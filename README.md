@@ -315,7 +315,7 @@ Find your resource IDs in the [Cloudflare Dashboard](https://dash.cloudflare.com
 - **D1 Database ID**: Workers & Pages → D1 → Your Database
 - **KV Namespace IDs**: Workers & Pages → KV → Your Namespaces
 
-##### Automatic Database Migration
+##### Database Migration
 
 The database migration happens automatically on the first request after deployment:
 
@@ -324,7 +324,12 @@ The database migration happens automatically on the first request after deployme
 3. Converts timestamps automatically if needed
 4. Creates indexes
 
-**No manual intervention required** - just deploy and the migration runs on first access.
+If you notice that your timestamps are incorrect after migration, you can manually run the provided SQL script `migrations/migrate_timestamps.sql` against your D1 database using the Cloudflare Dashboard's D1 query interface.
+
+```bash
+# test locally first - then use '--remote' for Cloudflare
+bunx wrangler d1 execute DB --file "migrations/migrate_timestamps.sql"
+```
 
 ##### Deploy
 
