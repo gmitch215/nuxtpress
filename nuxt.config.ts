@@ -53,14 +53,18 @@ export default defineNuxtConfig({
 	hub: {
 		cache: true,
 		kv: true,
-		database: true
+		db: 'sqlite'
+	},
+	$production: {
+		nitro: {
+			preset: 'cloudflare_module',
+			cloudflare: {
+				deployConfig: true,
+				nodeCompat: true
+			}
+		}
 	},
 	nitro: {
-		preset: 'cloudflare_module',
-		cloudflare: {
-			deployConfig: true,
-			nodeCompat: true
-		},
 		prerender: {
 			routes: ['/sitemap.xml'],
 			ignore: ['/api/**']
