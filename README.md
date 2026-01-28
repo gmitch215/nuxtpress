@@ -2,7 +2,7 @@
 
 > Modern, fast, and beautiful blog software powered by Nuxt UI v4 and Cloudflare Workers
 
-[![Deploy to NuxtHub](https://hub.nuxt.com/button.svg)](https://hub.nuxt.com/new?repo=gmitch215/nuxtpress)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/gmitch215/nuxtpress)
 
 ---
 
@@ -274,6 +274,77 @@ NuxtPress is a full-stack blogging platform built with:
 - `bun run preview` - Preview production build locally with NuxtHub
 - `bun run prettier` - Format code with Prettier
 - `bun run prettier:check` - Check code formatting
+
+#### Migrating from Pre-v0.10 NuxtHub
+
+If you're upgrading an existing Cloudflare-deployed NuxtPress project from pre-v0.10, the migration is straightforward. The main changes are:
+
+- **Database**: Now uses Drizzle ORM instead of `hubDatabase()`
+- **Bindings**: Configure via `wrangler.jsonc` (NuxtHub no longer auto-generates)
+- **Deployment**: Use Cloudflare's native tools (Workers/Pages CI or Wrangler)
+
+##### Link Your Existing Cloudflare Resources
+
+Create a `wrangler.jsonc` file in your project root to link your existing D1 database and KV namespaces:
+
+```jsonc
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "your-database-name",
+			"database_id": "your-database-id"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "your-kv-namespace-id"
+		},
+		{
+			"binding": "CACHE",
+			"id": "your-cache-namespace-id"
+		}
+	]
+}
+```
+
+Find your resource IDs in the [Cloudflare Dashboard](https://dash.cloudflare.com/):
+
+- **D1 Database ID**: Workers & Pages → D1 → Your Database
+- **KV Namespace IDs**: Workers & Pages → KV → Your Namespaces
+
+##### Automatic Database Migration
+
+The database migration happens automatically on the first request after deployment:
+
+1. Creates the `blog_posts` table if it doesn't exist
+2. Detects old timestamp format (seconds vs milliseconds)
+3. Converts timestamps automatically if needed
+4. Creates indexes
+
+**No manual intervention required** - just deploy and the migration runs on first access.
+
+##### Deploy
+
+Use Cloudflare's deployment tools:
+
+**Via Workers/Pages CI (Recommended)**:
+
+- Connect your Git repository in [Workers & Pages](https://dash.cloudflare.com/?to=/:account/workers-and-pages)
+- Automatic deployments on every push
+
+**Or via Wrangler CLI**:
+
+```bash
+bun run build
+npx wrangler pages deploy .output/public --project-name=nuxtpress
+```
+
+Set environment variables (like `NUXT_PASSWORD`) in:
+
+- Cloudflare Dashboard → Your Project → Settings → Environment Variables
 
 ### Project Structure
 
