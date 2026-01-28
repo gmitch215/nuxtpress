@@ -7,11 +7,6 @@
 			"migrations_dir": ".output/server/db/migrations/"
 		}
 	],
-	"r2_buckets": [
-		{
-			"binding": "BLOB"
-		}
-	],
 	"kv_namespaces": [
 		{
 			"binding": "KV"
