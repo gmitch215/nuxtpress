@@ -27,7 +27,7 @@ export default defineNuxtConfig({
 		}
 	},
 	ssr: true,
-	compatibilityDate: '2025-06-20',
+	compatibilityDate: '2025-12-13',
 	devtools: { enabled: process.env.NODE_ENV === 'development' },
 	srcDir: 'src',
 	serverDir: 'src/server',
