@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { db } from 'hub:db';
+import { kv } from 'hub:kv';
 
 let isInitialized = false;
 let initPromise: Promise<void> | null = null;
@@ -10,6 +11,13 @@ let initPromise: Promise<void> | null = null;
  */
 export async function ensureDatabase() {
 	if (isInitialized) return;
+
+	const cached = await kv.get<boolean>('nuxtpress:db_initialized');
+	if (cached) {
+		isInitialized = true;
+		return;
+	}
+
 	if (initPromise) return initPromise;
 
 	initPromise = (async () => {
@@ -56,12 +64,13 @@ export async function ensureDatabase() {
 			}
 
 			console.log('✓ Database migrations completed');
-			isInitialized = true;
 		} catch (error: any) {
 			console.error('Database migration error:', error);
 			// Don't throw - let the app continue, it might be a permission issue
 			// The migrations might have already run
+		} finally {
 			isInitialized = true;
+			await kv.set('nuxtpress:db_initialized', true);
 		}
 	})();
 
