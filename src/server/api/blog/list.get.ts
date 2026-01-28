@@ -1,4 +1,5 @@
 import { desc } from 'drizzle-orm';
+import { db } from 'hub:db';
 import { blogPosts } from '~/server/db/schema';
 import { ensureDatabase } from '~/server/utils/db';
 import { BlogPost } from '~/shared/types';
@@ -11,9 +12,12 @@ export default defineEventHandler(async (_) => {
 		(row) =>
 			({
 				...row,
-				created_at: row.createdAt,
-				updated_at: row.updatedAt,
-				thumbnail_url: row.thumbnailUrl,
+				created_at: new Date(row.createdAt),
+				updated_at: new Date(row.updatedAt),
+				thumbnail: row.thumbnail
+					? Uint8Array.from(atob(row.thumbnail), (c) => c.charCodeAt(0))
+					: undefined,
+				thumbnail_url: row.thumbnailUrl || undefined,
 				tags: row.tags ? row.tags.split(',').map((t) => t.trim()) : []
 			}) satisfies BlogPost
 	) as BlogPost[];

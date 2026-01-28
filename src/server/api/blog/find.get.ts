@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { db } from 'hub:db';
 import { kv } from 'hub:kv';
 import { blogPosts } from '~/server/db/schema';
 import { ensureDatabase } from '~/server/utils/db';
@@ -7,7 +8,7 @@ import { BlogPost } from '~/shared/types';
 export default defineEventHandler(async (event) => {
 	await ensureDatabase();
 	const { slug, year, month, day } = getQuery(event);
-	if (!slug || Array.isArray(slug)) {
+	if (!slug || typeof slug !== 'string' || Array.isArray(slug)) {
 		throw createError({
 			statusCode: 400,
 			statusMessage: 'No valid slug provided'
@@ -44,8 +45,11 @@ export default defineEventHandler(async (event) => {
 
 	const posts = rows.map((row) => ({
 		...row,
-		created_at: row.createdAt,
-		updated_at: row.updatedAt,
+		created_at: new Date(row.createdAt),
+		updated_at: new Date(row.updatedAt),
+		thumbnail: row.thumbnail
+			? Uint8Array.from(atob(row.thumbnail), (c) => c.charCodeAt(0))
+			: undefined,
 		thumbnail_url: row.thumbnailUrl,
 		tags: row.tags ? row.tags.split(',').map((t: string) => t.trim()) : []
 	})) as BlogPost[];
