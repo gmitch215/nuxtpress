@@ -4,15 +4,13 @@ import { blogPosts } from '~/server/db/schema';
 import { ensureLoggedIn } from '~/server/utils';
 import { ensureDatabase } from '~/server/utils/db';
 import { blogPostCreateSchema } from '~/shared/schemas';
-import { type BlogPost } from '~/shared/types';
+import { BlogPostData, type BlogPost } from '~/shared/types';
 
 export default defineEventHandler(async (event) => {
 	await ensureLoggedIn(event);
 	await ensureDatabase();
 
-	const { post } = await readBody<{ post: Omit<BlogPost, 'id' | 'created_at' | 'updated_at'> }>(
-		event
-	);
+	const { post } = await readBody<{ post: BlogPostData }>(event);
 
 	if (!post) {
 		throw createError({

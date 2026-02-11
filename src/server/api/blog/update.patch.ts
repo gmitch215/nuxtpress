@@ -4,18 +4,25 @@ import { blogPosts } from '~/server/db/schema';
 import { ensureLoggedIn } from '~/server/utils';
 import { ensureDatabase } from '~/server/utils/db';
 import { blogPostUpdateSchema } from '~/shared/schemas';
-import { type BlogPost } from '~/shared/types';
+import { BlogPostData } from '~/shared/types';
 
 export default defineEventHandler(async (event) => {
 	await ensureLoggedIn(event);
 	await ensureDatabase();
 
-	const { post } = await readBody<{ post: Omit<BlogPost, 'created_at' | 'updated_at'> }>(event);
+	const { post } = await readBody<{ post: BlogPostData & { id: string } }>(event);
 
 	if (!post) {
 		throw createError({
 			statusCode: 400,
 			statusMessage: 'No post object provided'
+		});
+	}
+
+	if (!post.id || typeof post.id !== 'string' || post.id.trim() === '') {
+		throw createError({
+			statusCode: 400,
+			statusMessage: 'Invalid post ID provided'
 		});
 	}
 

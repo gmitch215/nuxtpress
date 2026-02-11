@@ -145,11 +145,73 @@
 			>
 				Cancel
 			</UButton>
+			<UPopover
+				v-model:open="popoverOpen"
+				dismissible
+			>
+				<UButton
+					icon="mdi:content-save-cog"
+					color="neutral"
+					:disabled="loading"
+					:loading="loadingDraft"
+					@click="handleDrafts"
+				>
+					Load Draft
+				</UButton>
+
+				<template #content="{ close }">
+					<div class="p-4 max-h-96 overflow-y-auto min-w-64">
+						<h3 class="text-lg font-semibold mb-2">Available Drafts</h3>
+						<div
+							v-if="!drafts || drafts.length === 0"
+							class="text-gray-500 text-center py-4"
+						>
+							No drafts found
+						</div>
+						<div
+							v-else
+							class="space-y-2"
+						>
+							<div
+								v-for="draft in drafts"
+								:key="draft.slug"
+								class="p-2 border rounded hover:opacity-70 cursor-pointer transition-opacity"
+								@mouseenter="previewDraft(draft)"
+								@click="
+									() => {
+										loadDraft(draft);
+										close();
+									}
+								"
+							>
+								<div class="font-medium">
+									{{ draft.title || draft.slug }}
+								</div>
+								<div
+									v-if="draft.title && draft.slug"
+									class="text-sm text-gray-500"
+								>
+									{{ draft.slug }}
+								</div>
+							</div>
+						</div>
+					</div>
+				</template>
+			</UPopover>
+			<UButton
+				icon="mdi:content-save-edit"
+				color="secondary"
+				:disabled="loading || !state.slug"
+				:loading="savingDraft"
+				@click="handleSave"
+			>
+				Save Draft
+			</UButton>
 			<UButton
 				type="submit"
 				icon="mdi:content-save"
 				:loading="loading"
-				:disabled="loading || state.content.length < 50"
+				:disabled="loading || !state.slug || state.content.length < 50"
 			>
 				{{ mode === 'edit' ? 'Update Post' : 'Create Post' }}
 			</UButton>
@@ -173,6 +235,7 @@ const emit = defineEmits<{
 }>();
 
 const { addPost, updatePost } = useBlogPosts();
+const { drafts, fetchDrafts, saveDraft } = useDrafts();
 
 const state = reactive<BlogPostInput>({
 	title: props.initialData?.title || '',
@@ -181,6 +244,8 @@ const state = reactive<BlogPostInput>({
 	thumbnail_url: props.initialData?.thumbnail_url || '',
 	tags: props.initialData?.tags || []
 });
+
+const previousState = ref<BlogPostInput | null>(null);
 
 const tagInput = ref('');
 const loading = ref(false);
@@ -287,5 +352,117 @@ const handleSubmit = async (event: FormSubmitEvent<BlogPostInput>) => {
 
 const handleCancel = () => {
 	emit('cancel');
+};
+
+const loadingDraft = ref(false);
+const draftSelected = ref(false);
+const popoverOpen = ref(false);
+
+watch(popoverOpen, (isOpen) => {
+	if (!isOpen) {
+		if (!draftSelected.value) {
+			clearPreview();
+		}
+		draftSelected.value = false;
+	}
+});
+
+const previewDraft = (draft: Partial<BlogPostInput>) => {
+	if (!previousState.value) {
+		previousState.value = { ...state };
+	}
+
+	Object.assign(state, {
+		title: draft.title || '',
+		slug: draft.slug || '',
+		content: draft.content || '',
+		thumbnail_url: draft.thumbnail_url || '',
+		tags: draft.tags || []
+	});
+};
+
+const clearPreview = () => {
+	if (previousState.value) {
+		Object.assign(state, previousState.value);
+		previousState.value = null;
+	}
+};
+
+const loadDraft = (draft: Partial<BlogPostInput>) => {
+	const hasExistingData =
+		previousState.value &&
+		(previousState.value.title ||
+			previousState.value.slug ||
+			previousState.value.content ||
+			previousState.value.thumbnail_url ||
+			previousState.value.tags.length > 0);
+
+	if (hasExistingData) {
+		const confirmed = confirm('Loading this draft will replace your current form data. Continue?');
+		if (!confirmed) {
+			clearPreview();
+			draftSelected.value = false;
+			return;
+		}
+	}
+
+	Object.assign(state, {
+		title: draft.title || '',
+		slug: draft.slug || '',
+		content: draft.content || '',
+		thumbnail_url: draft.thumbnail_url || '',
+		tags: draft.tags || []
+	});
+
+	previousState.value = null;
+	draftSelected.value = true;
+
+	toast.add({
+		title: 'Draft Loaded',
+		description: 'The draft has been loaded into the form.',
+		icon: 'mdi:content-save-cog',
+		color: 'info'
+	});
+};
+
+const handleDrafts = async () => {
+	loadingDraft.value = true;
+	try {
+		await fetchDrafts();
+	} catch (err: any) {
+		toast.add({
+			title: 'Error',
+			description: err.message || 'Failed to load drafts',
+			icon: 'mdi:alert-circle',
+			color: 'error'
+		});
+	} finally {
+		loadingDraft.value = false;
+	}
+};
+
+const savingDraft = ref(false);
+
+const handleSave = async () => {
+	savingDraft.value = true;
+	try {
+		await saveDraft({ ...state, slug: state.slug });
+
+		toast.add({
+			title: 'Draft Saved',
+			description: 'Your draft has been saved successfully.',
+			icon: 'mdi:content-save-edit',
+			color: 'success'
+		});
+	} catch (err: any) {
+		toast.add({
+			title: 'Error',
+			description: err.message || 'Failed to save draft',
+			icon: 'mdi:alert-circle',
+			color: 'error'
+		});
+	} finally {
+		savingDraft.value = false;
+	}
 };
 </script>

@@ -10,6 +10,8 @@ export type BlogPost = {
 	tags: string[];
 };
 
+export type BlogPostData = Omit<BlogPost, 'id' | 'created_at' | 'updated_at'>;
+
 export function formatDate(date: Date) {
 	return new Date(date).toLocaleDateString('en-US', {
 		year: 'numeric',

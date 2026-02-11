@@ -1,4 +1,4 @@
-import type { BlogPost } from '~/shared/types';
+import type { BlogPost, BlogPostData } from '~/shared/types';
 
 export function useBlogPosts() {
 	const posts = useState<BlogPost[]>('blog-posts', () => []);
@@ -43,9 +43,7 @@ export function useBlogPosts() {
 		};
 	};
 
-	const addPost = async (
-		post: Omit<BlogPost, 'id' | 'created_at' | 'updated_at'>
-	): Promise<BlogPost> => {
+	const addPost = async (post: BlogPostData): Promise<BlogPost> => {
 		const res = await $fetch<BlogPost>('/api/blog/create', {
 			method: 'POST',
 			body: { post }
@@ -55,7 +53,7 @@ export function useBlogPosts() {
 		return res;
 	};
 
-	const updatePost = async (post: Omit<BlogPost, 'created_at' | 'updated_at'>) => {
+	const updatePost = async (post: BlogPostData & { id: string }) => {
 		const res = await $fetch<BlogPost>('/api/blog/update', {
 			method: 'PATCH',
 			body: { post }
@@ -139,5 +137,32 @@ export function useSettings() {
 	return {
 		settings,
 		fetchSettings
+	};
+}
+
+export function useDrafts() {
+	const drafts = useState<Partial<BlogPostData>[]>('blog-drafts', () => []);
+
+	const fetchDrafts = async () => {
+		const res = await $fetch<{ drafts: Partial<BlogPostData>[] }>('/api/blog/draft', {
+			method: 'GET'
+		});
+
+		drafts.value = res.drafts;
+		return res.drafts;
+	};
+
+	const saveDraft = async (draft: Partial<BlogPostData> & { slug: string }) => {
+		await $fetch('/api/blog/draft', {
+			method: 'POST',
+			body: { post: draft }
+		});
+		await fetchDrafts();
+	};
+
+	return {
+		drafts,
+		fetchDrafts,
+		saveDraft
 	};
 }
