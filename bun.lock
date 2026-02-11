@@ -5,25 +5,27 @@
     "": {
       "name": "nuxtpress",
       "dependencies": {
-        "@cloudflare/workers-types": "^4.20260127.0",
+        "@cloudflare/workers-types": "^4.20260210.0",
         "@libsql/client": "^0.17.0",
         "@nuxt/icon": "^2.2.1",
         "@nuxt/image": "^2.0.0",
-        "@nuxt/kit": "^4.3.0",
+        "@nuxt/kit": "^4.3.1",
         "@nuxt/ui": "^4.4.0",
-        "@nuxthub/core": "^0.10.5",
-        "@nuxtjs/robots": "^5.6.7",
-        "@nuxtjs/sitemap": "^7.5.2",
-        "@tiptap/extension-emoji": "^3.17.1",
-        "@tiptap/extension-text-align": "^3.17.1",
+        "@nuxthub/core": "^0.10.6",
+        "@nuxtjs/robots": "^5.7.0",
+        "@nuxtjs/sitemap": "^7.6.0",
+        "@tiptap/extension-audio": "^3.19.0",
+        "@tiptap/extension-emoji": "^3.19.0",
+        "@tiptap/extension-text-align": "^3.19.0",
+        "@tiptap/extension-youtube": "^3.19.0",
         "@types/luxon": "^3.7.1",
         "dompurify": "^3.3.1",
-        "drizzle-kit": "^0.31.8",
+        "drizzle-kit": "^0.31.9",
         "drizzle-orm": "^0.45.1",
         "highlight.js": "^11.11.1",
         "luxon": "^3.7.2",
         "marked": "^17.0.1",
-        "nuxt": "^4.3.0",
+        "nuxt": "^4.3.1",
         "nuxt-schema-org": "^5.0.10",
         "nuxt-viewport": "^2.3.1",
         "xmlbuilder2": "^4.0.3",
@@ -31,11 +33,11 @@
       },
       "devDependencies": {
         "@iconify-json/cib": "^1.2.3",
-        "@iconify-json/lucide": "^1.2.87",
-        "@iconify-json/material-symbols": "^1.2.53",
+        "@iconify-json/lucide": "^1.2.90",
+        "@iconify-json/material-symbols": "^1.2.55",
         "@iconify-json/mdi": "^1.2.3",
         "@nuxtjs/google-fonts": "^3.2.0",
-        "@types/bun": "^1.3.6",
+        "@types/bun": "^1.3.9",
         "husky": "^9.1.7",
         "lightningcss": "^1.31.1",
         "lint-staged": "^16.2.7",
@@ -44,7 +46,7 @@
         "prettier-plugin-tailwindcss": "^0.7.2",
         "sass": "^1.97.3",
         "vue-tsc": "^3.2.4",
-        "wrangler": "^4.61.0",
+        "wrangler": "^4.64.0",
       },
       "peerDependencies": {
         "typescript": "^5.9.3",
@@ -708,6 +710,8 @@
 
     "@tiptap/core": ["@tiptap/core@3.17.1", "", { "peerDependencies": { "@tiptap/pm": "^3.17.1" } }, "sha512-f8hB9MzXqsuXoF9qXEDEH5Fb3VgwhEFMBMfk9EKN88l5adri6oM8mt2XOWVxVVssjpEW0177zXSLPKWzoS/vrw=="],
 
+    "@tiptap/extension-audio": ["@tiptap/extension-audio@3.19.0", "", { "peerDependencies": { "@tiptap/core": "^3.19.0" } }, "sha512-viBWFB3oNdCJlvCTlpWYCJJtb1fsg912uNOuGTBqZ0PcN88xUH6iZXDBTK8Jz/Qdf8td3pM7G6wIL64OMuanVQ=="],
+
     "@tiptap/extension-blockquote": ["@tiptap/extension-blockquote@3.17.1", "", { "peerDependencies": { "@tiptap/core": "^3.17.1" } }, "sha512-X4jU/fllJQ8QbjCHUafU4QIHBobyXP3yGBoOcXxUaKlWbLvUs0SQTREM3n6/86m2YyAxwTPG1cn3Xypf42DMAQ=="],
 
     "@tiptap/extension-bold": ["@tiptap/extension-bold@3.17.1", "", { "peerDependencies": { "@tiptap/core": "^3.17.1" } }, "sha512-PZmrljcVBziJkQDXT/QJv4ESxVVQ0iRH+ruTzPda56Kk4h2310cSXGjI33W7rlCikGPoBAAjY/inujm46YB4bw=="],
@@ -771,6 +775,8 @@
     "@tiptap/extension-text-align": ["@tiptap/extension-text-align@3.19.0", "", { "peerDependencies": { "@tiptap/core": "^3.19.0" } }, "sha512-cY8bHWYojLTHXZb2j2srdh7ltmDgnwXYvSxbPL4HK4j7XxQOGnOsTakgM/BNhxymOfEj2414i5Otyy8hlgviFA=="],
 
     "@tiptap/extension-underline": ["@tiptap/extension-underline@3.17.1", "", { "peerDependencies": { "@tiptap/core": "^3.17.1" } }, "sha512-6RdBzmkg6DYs0EqPyoqLGkISXzCnPqM/q3A6nh3EmFmORcIDfuNmcidvA6EImebK8KQGmtZKsRhQSnK4CNQ39g=="],
+
+    "@tiptap/extension-youtube": ["@tiptap/extension-youtube@3.19.0", "", { "peerDependencies": { "@tiptap/core": "^3.19.0" } }, "sha512-/3Z/jw9VbD3WrS1cOcxKUN0oMVnX9NVSekVG4uJHZYs5LhG2tbmUkBYNzj4oJcZcuJ4WPTD1EaAVEgNVffaoJg=="],
 
     "@tiptap/extensions": ["@tiptap/extensions@3.17.1", "", { "peerDependencies": { "@tiptap/core": "^3.17.1", "@tiptap/pm": "^3.17.1" } }, "sha512-aQ4WA5bdRpv9yPQ6rRdiqwlMZ1eJw1HyEaNPQhOr2HVhQ0EqSDIOEXF4ymCveGAHxXbxNvtQ+4t1ymQEikGfXA=="],
 

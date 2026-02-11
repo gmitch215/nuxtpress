@@ -5,8 +5,16 @@
 			v-model="localContent"
 			:extensions="[
 				Emoji.configure({ enableEmoticons: true }),
-				TextAlign.configure({ types: ['heading', 'paragraph'] })
+				TextAlign.configure({ types: ['heading', 'paragraph'] }),
+				useKeyboardNavigation(),
+				Youtube.configure({
+					controls: true,
+					nocookie: true,
+					modestBranding: true
+				}),
+				Audio
 			]"
+			:handlers="customHandlers"
 			content-type="markdown"
 			placeholder="Write your content here... (Markdown supported)"
 			class="w-full min-h-50 border border-gray-300 dark:border-gray-700 rounded-lg p-4"
@@ -27,9 +35,12 @@
 </template>
 
 <script setup lang="ts">
-import type { EditorToolbarItem } from '@nuxt/ui';
+import type { EditorCustomHandlers, EditorToolbarItem } from '@nuxt/ui';
+import type { Editor } from '@tiptap/core';
+import Audio from '@tiptap/extension-audio';
 import { Emoji, gitHubEmojis } from '@tiptap/extension-emoji';
 import { TextAlign } from '@tiptap/extension-text-align';
+import Youtube from '@tiptap/extension-youtube';
 
 const props = defineProps<{
 	modelValue: string;
@@ -54,8 +65,36 @@ watch(localContent, (newValue) => {
 	emit('update:modelValue', newValue);
 });
 
+// Custom handlers for YouTube and Audio
+const customHandlers = {
+	youtube: {
+		canExecute: (editor: Editor) => editor.can().insertContent({ type: 'youtube' }),
+		execute: (editor: Editor) => {
+			const url = prompt('Enter YouTube URL');
+			if (url) {
+				return editor.chain().focus().setYoutubeVideo({ src: url });
+			}
+			return editor.chain();
+		},
+		isActive: (editor: Editor) => editor.isActive('youtube'),
+		isDisabled: () => false
+	},
+	audio: {
+		canExecute: (editor: Editor) => editor.can().insertContent({ type: 'audio' }),
+		execute: (editor: Editor) => {
+			const url = prompt('Enter audio URL');
+			if (url) {
+				return editor.chain().focus().setAudio({ src: url });
+			}
+			return editor.chain();
+		},
+		isActive: (editor: Editor) => editor.isActive('audio'),
+		isDisabled: () => false
+	}
+} satisfies EditorCustomHandlers;
+
 // editor
-const toolbar: EditorToolbarItem[][] = [
+const toolbar: EditorToolbarItem<typeof customHandlers>[][] = [
 	[
 		{
 			kind: 'undo',
@@ -232,6 +271,23 @@ const toolbar: EditorToolbarItem[][] = [
 					label: 'Align Justify'
 				}
 			]
+		}
+	],
+	[
+		{
+			kind: 'emoji',
+			icon: 'lucide:smile',
+			tooltip: { text: 'Insert Emoji' }
+		},
+		{
+			kind: 'youtube',
+			icon: 'lucide:youtube',
+			tooltip: { text: 'Insert YouTube Video' }
+		},
+		{
+			kind: 'audio',
+			icon: 'lucide:music',
+			tooltip: { text: 'Insert Audio' }
 		}
 	]
 ];
