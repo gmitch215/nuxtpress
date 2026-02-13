@@ -9,6 +9,8 @@
 				loading="eager"
 				:preload="{ fetchPriority: 'high' }"
 				format="webp"
+				quality="90"
+				sizes="sm:80px md:96px lg:128px"
 			/>
 			<p class="text-md md:text-lg leading-relaxed">
 				{{

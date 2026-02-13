@@ -68,28 +68,19 @@
 					:preload="{ fetchPriority: 'high' }"
 					format="webp"
 					quality="85"
+					sizes="sm:100vw md:896px lg:896px"
 					class="w-full h-auto rounded-lg shadow-lg min-h-50 max-h-96 object-cover"
 				/>
 			</div>
 
-			<ClientOnly>
-				<span :style="`color: ${settings.themeColor || $config.public.themeColor}`"
-					>{{ Math.max(1, Math.floor(post.content.length / 1190)) }} min. read</span
-				>
-				<span
-					v-if="!renderedContent"
-					class="text-gray-500 dark:text-gray-400"
-					>Loading content...</span
-				>
-				<div
-					class="prose prose-lg dark:prose-invert max-w-none"
-					v-html="renderedContent"
-					style="contain-intrinsic-size: auto 500px"
-				/>
-				<template #fallback>
-					<div class="text-gray-500 dark:text-gray-400">Loading content...</div>
-				</template>
-			</ClientOnly>
+			<span :style="`color: ${settings.themeColor || $config.public.themeColor}`"
+				>{{ Math.max(1, Math.floor(post.content.length / 1190)) }} min. read</span
+			>
+			<div
+				class="prose prose-lg dark:prose-invert max-w-none"
+				v-html="renderedContent"
+				style="contain-intrinsic-size: auto 500px"
+			/>
 			<footer class="pt-8 border-t border-gray-200 dark:border-gray-800">
 				<div class="text-sm text-gray-500 dark:text-gray-400">
 					Post by {{ settings.author || $config.public.author }} | Last updated:

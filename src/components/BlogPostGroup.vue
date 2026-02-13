@@ -5,7 +5,8 @@
 			:orientation="$viewport.isLessOrEquals('mobileMedium') ? 'vertical' : 'horizontal'"
 			class="mb-4"
 			:ui="{
-				image: 'aspect-2/1 object-cover w-full h-full'
+				image: 'aspect-2/1 object-cover w-full h-full',
+				imageWrapper: 'overflow-hidden'
 			}"
 		/>
 		<ClientOnly>
@@ -61,8 +62,20 @@ const displayed = computed(() =>
 		if (index < 2 && typeof image === 'string') {
 			image = {
 				src: image,
+				decoding: 'async',
 				loading: 'eager',
-				fetchPriority: 'high'
+				fetchPriority: 'high',
+				format: 'webp',
+				quality: '85',
+				sizes: 'sm:100vw md:50vw lg:33vw'
+			};
+		} else if (typeof image === 'string') {
+			image = {
+				src: image,
+				loading: 'lazy',
+				format: 'webp',
+				quality: '80',
+				sizes: 'sm:100vw md:50vw lg:33vw'
 			};
 		}
 
