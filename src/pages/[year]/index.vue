@@ -28,25 +28,23 @@
 				</div>
 			</div>
 
-			<ClientOnly>
-				<div v-if="filteredPosts.length > 0 && !loading">
-					<BlogPostGroup :posts="filteredPosts" />
-				</div>
-				<div
-					v-else-if="!loading"
-					class="text-center py-20"
+			<div v-if="filteredPosts.length > 0 && !loading">
+				<BlogPostGroup :posts="filteredPosts" />
+			</div>
+			<div
+				v-else-if="!loading"
+				class="text-center py-20"
+			>
+				<p class="text-gray-500 dark:text-gray-400 text-lg">No posts found for {{ year }}</p>
+				<UButton
+					to="/"
+					class="mt-4"
+					icon="mdi:home"
+					variant="outline"
 				>
-					<p class="text-gray-500 dark:text-gray-400 text-lg">No posts found for {{ year }}</p>
-					<UButton
-						to="/"
-						class="mt-4"
-						icon="mdi:home"
-						variant="outline"
-					>
-						Back to Home
-					</UButton>
-				</div>
-			</ClientOnly>
+					Back to Home
+				</UButton>
+			</div>
 		</div>
 	</div>
 </template>

@@ -1,42 +1,40 @@
 <template>
 	<div class="w-full flex space-x-2 justify-center items-center mt-2">
-		<ClientOnly>
-			<UButton
-				icon="mdi:refresh"
-				color="neutral"
-				variant="outline"
-				:loading="refreshing"
-				:disabled="refreshing"
-				@click="refreshPosts"
-				size="lg"
-			/>
-			<UButton
-				v-if="loggedIn"
-				icon="mdi:plus"
-				color="primary"
-				variant="outline"
-				size="lg"
-				@click="newPostOpen = true"
-				>New Post</UButton
-			>
-			<UButton
-				v-else
-				icon="mdi:account-lock"
-				color="primary"
-				variant="outline"
-				size="lg"
-				@click="loginOpen = true"
-				>Log In</UButton
-			>
-			<UButton
-				v-if="loggedIn"
-				icon="material-symbols:settings"
-				color="error"
-				variant="outline"
-				size="lg"
-				@click="settingsOpen = true"
-			/>
-		</ClientOnly>
+		<UButton
+			icon="mdi:refresh"
+			color="neutral"
+			variant="outline"
+			:loading="refreshing"
+			:disabled="refreshing"
+			@click="refreshPosts"
+			size="lg"
+		/>
+		<UButton
+			v-if="loggedIn"
+			icon="mdi:plus"
+			color="primary"
+			variant="outline"
+			size="lg"
+			@click="newPostOpen = true"
+			>New Post</UButton
+		>
+		<UButton
+			v-else
+			icon="mdi:account-lock"
+			color="primary"
+			variant="outline"
+			size="lg"
+			@click="loginOpen = true"
+			>Log In</UButton
+		>
+		<UButton
+			v-if="loggedIn"
+			icon="material-symbols:settings"
+			color="error"
+			variant="outline"
+			size="lg"
+			@click="settingsOpen = true"
+		/>
 	</div>
 	<div
 		class="w-full flex flex-col my-4"
@@ -132,8 +130,11 @@
 
 <script setup lang="ts">
 const { posts, fetchPosts } = useBlogPosts();
-const { loggedIn } = useLogin();
+const { loggedIn, isLoggedIn } = useLogin();
 const { fetchSettings } = useSettings();
+
+// Check login state during SSR
+await isLoggedIn();
 
 const loginOpen = ref(false);
 const newPostOpen = ref(false);

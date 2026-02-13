@@ -14,27 +14,25 @@
 				</div>
 			</div>
 
-			<ClientOnly>
-				<div v-if="filteredPosts.length > 0 && !loading">
-					<BlogPostGroup :posts="filteredPosts" />
-				</div>
-				<div
-					v-else-if="!loading"
-					class="text-center py-20"
+			<div v-if="filteredPosts.length > 0 && !loading">
+				<BlogPostGroup :posts="filteredPosts" />
+			</div>
+			<div
+				v-else-if="!loading"
+				class="text-center py-20"
+			>
+				<p class="text-gray-500 dark:text-gray-400 text-lg">
+					No posts found for {{ monthName }} {{ day }}, {{ year }}
+				</p>
+				<UButton
+					:to="`/${year}/${month}`"
+					class="mt-4"
+					icon="mdi:calendar-blank-multiple"
+					variant="outline"
 				>
-					<p class="text-gray-500 dark:text-gray-400 text-lg">
-						No posts found for {{ monthName }} {{ day }}, {{ year }}
-					</p>
-					<UButton
-						:to="`/${year}/${month}`"
-						class="mt-4"
-						icon="mdi:calendar-blank-multiple"
-						variant="outline"
-					>
-						View All Posts from {{ monthName }} {{ year }}
-					</UButton>
-				</div>
-			</ClientOnly>
+					View All Posts from {{ monthName }} {{ year }}
+				</UButton>
+			</div>
 		</div>
 	</div>
 </template>

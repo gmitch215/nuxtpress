@@ -12,30 +12,28 @@
 					>
 						{{ post.title }}
 					</h1>
-					<ClientOnly>
-						<UButton
-							v-if="loggedIn"
-							icon="mdi:pencil"
-							class="ml-4"
-							color="primary"
-							:ui="{
-								base: 'size-7 lg:size-8 justify-center items-center',
-								leadingIcon: 'size-4 lg:size-5'
-							}"
-							@click="editorOpen = true"
-						/>
-						<UButton
-							v-if="loggedIn"
-							icon="mdi:delete"
-							class="ml-2"
-							color="error"
-							:ui="{
-								base: 'size-7 lg:size-8 justify-center items-center',
-								leadingIcon: 'size-4 lg:size-5'
-							}"
-							@click="deletePost"
-						/>
-					</ClientOnly>
+					<UButton
+						v-if="loggedIn"
+						icon="mdi:pencil"
+						class="ml-4"
+						color="primary"
+						:ui="{
+							base: 'size-7 lg:size-8 justify-center items-center',
+							leadingIcon: 'size-4 lg:size-5'
+						}"
+						@click="editorOpen = true"
+					/>
+					<UButton
+						v-if="loggedIn"
+						icon="mdi:delete"
+						class="ml-2"
+						color="error"
+						:ui="{
+							base: 'size-7 lg:size-8 justify-center items-center',
+							leadingIcon: 'size-4 lg:size-5'
+						}"
+						@click="deletePost"
+					/>
 				</div>
 
 				<div class="flex items-center gap-4 text-gray-600 dark:text-gray-400">
@@ -114,8 +112,11 @@ import { formatDate, type BlogPost } from '~/shared/types';
 
 const { settings } = useSettings();
 const config = useRuntimeConfig();
-const { loggedIn } = useLogin();
+const { loggedIn, isLoggedIn } = useLogin();
 const editorOpen = ref(false);
+
+// Check login state during SSR for better performance
+await isLoggedIn();
 
 const route = useRoute();
 const router = useRouter();
