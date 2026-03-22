@@ -1,14 +1,16 @@
 <template>
 	<div class="w-full justify-center px-4 sm:px-8 md:px-12 lg:px-24 xl:px-32 mt-8">
 		<UBlogPosts
-			:posts="displayed"
 			:orientation="$viewport.isLessOrEquals('mobileMedium') ? 'vertical' : 'horizontal'"
 			class="mb-4"
-			:ui="{
-				image: 'aspect-2/1 object-cover w-full h-full',
-				imageWrapper: 'overflow-hidden'
-			}"
-		/>
+		>
+			<LazyUBlogPost
+				v-for="(post, index) in displayed"
+				:key="index"
+				v-bind="post"
+				hydrate-on-visible
+			/>
+		</UBlogPosts>
 		<span class="text-gray-500 light:text-gray-400">{{ displayed.length }} total post(s)</span>
 	</div>
 </template>

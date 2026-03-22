@@ -59,7 +59,7 @@
 				v-if="thumbnailUrl"
 				class="w-full"
 			>
-				<NuxtImg
+				<LazyNuxtImg
 					:src="thumbnailUrl"
 					:alt="post.title"
 					fit="cover"
@@ -68,6 +68,7 @@
 					quality="85"
 					sizes="sm:100vw md:896px lg:896px"
 					class="w-full h-auto rounded-lg shadow-lg min-h-50 max-h-96 object-cover"
+					hydrate-on-visible
 				/>
 			</div>
 
@@ -93,7 +94,7 @@
 		class="max-w-[90vw] w-full"
 	>
 		<template #body>
-			<BlogForm
+			<LazyBlogForm
 				:initial-data="post || undefined"
 				mode="edit"
 				@cancel="editorOpen = false"
@@ -101,13 +102,14 @@
 					editorOpen = false;
 					$router.go(0); // refresh the page to show updated post
 				"
+				hydrate-on-visible
 			/>
 		</template>
 	</UModal>
 </template>
 
 <script setup lang="ts">
-import DOMPurify from 'dompurify';
+import DOMPurify from 'isomorphic-dompurify';
 import { formatDate, type BlogPost } from '~/shared/types';
 
 const { settings } = useSettings();
@@ -206,16 +208,6 @@ const thumbnailUrl = computed(() => {
 
 const renderedContent = computed(() => {
 	if (!post.value?.content) return '';
-
-	// Render initial content preview on server for better LCP
-	if (import.meta.server) {
-		const { renderMarkdown } = useMarkdown();
-		// Render first ~1000 chars on server for initial paint
-		const preview = post.value.content.slice(0, 1000);
-		return (
-			renderMarkdown(preview) + '<div class="text-gray-400 italic">Loading full content...</div>'
-		);
-	}
 
 	try {
 		const { renderMarkdown } = useMarkdown();

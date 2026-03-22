@@ -139,6 +139,15 @@
 			</div>
 		</div>
 	</div>
+	<LazyUBanner
+		id="message"
+		v-if="settings.message"
+		:title="settings.message.text"
+		:icon="settings.message.icon"
+		:color="settings.message.type"
+		:to="settings.message.link || undefined"
+		class="mb-4"
+	/>
 </template>
 
 <script setup lang="ts">

@@ -185,6 +185,130 @@
 		</UFormField>
 
 		<div class="border-t pt-4">
+			<h3 class="text-lg font-semibold mb-4">Banner Message</h3>
+
+			<UFormField name="message.text">
+				<UInput
+					v-model="messageState.text"
+					placeholder="Enter a message to display in a banner at the top of the site"
+					class="w-full"
+					:disabled="loading"
+				/>
+			</UFormField>
+
+			<div class="flex items-start mt-2 gap-2">
+				<UFormField
+					name="message.type"
+					class="min-w-32"
+				>
+					<USelect
+						v-model="messageState.type"
+						:items="[
+							{ label: 'Info', value: 'info', icon: 'mdi:information-outline' },
+							{ label: 'Success', value: 'success', icon: 'mdi:check-circle' },
+							{ label: 'Warning', value: 'warning', icon: 'mdi:alert-outline' },
+							{ label: 'Error', value: 'error', icon: 'mdi:alert-box' }
+						]"
+						class="w-full"
+						:disabled="loading"
+					/>
+
+					<template #help>
+						<span> Message type determines color.</span>
+					</template>
+				</UFormField>
+				<UFormField name="message.icon">
+					<UInput
+						v-model="messageState.icon"
+						placeholder="Enter an icon name (e.g., mdi:information-outline)."
+						class="w-full"
+						:icon="messageState.icon"
+						:disabled="loading"
+					/>
+
+					<template #help>
+						<span>
+							Optional icon to display in the banner. Use any icon from
+							<NuxtLink
+								to="https://icon-sets.iconify.design/"
+								target="_blank"
+								class="text-blue-600 hover:underline"
+							>
+								Iconify
+							</NuxtLink>
+						</span>
+					</template>
+				</UFormField>
+			</div>
+
+			<UFormField
+				label="TTL"
+				name="message.ttl"
+				class="max-w-full mt-2"
+				help="Set between 0 (indefinitely) up to 14 days (3,024,000 seconds)"
+			>
+				<UInput
+					v-model="messageState.ttl"
+					type="number"
+					placeholder="Time (in seconds) for the message to disappear. Set to 0 to show indefinitely."
+					:min="0"
+					:max="14 * 24 * 60 * 60"
+					class="w-full"
+					:disabled="loading"
+				/>
+			</UFormField>
+
+			<UFormField
+				label="Link"
+				name="message.link"
+				class="max-w-full mt-2"
+			>
+				<UInput
+					v-model="messageState.link"
+					placeholder="https://example.com"
+					class="w-full"
+					:disabled="loading"
+				/>
+
+				<template #help>
+					<span>
+						Optional URL to make the banner clickable. Must start with http:// or https://
+						<template v-if="safeMessageLink">
+							•
+							<NuxtLink
+								:to="safeMessageLink"
+								target="_blank"
+								class="text-blue-600 hover:underline"
+							>
+								{{ safeMessageLink }}
+							</NuxtLink>
+						</template>
+					</span>
+				</template>
+			</UFormField>
+
+			<div class="mt-2">
+				<h3 class="text-lg font-semibold mt-8 mb-4">Preview</h3>
+				<UBanner
+					v-if="messageState.text"
+					:title="messageState.text"
+					:icon="messageState.icon"
+					:color="
+						{
+							info: 'info',
+							success: 'success',
+							warning: 'warning',
+							error: 'error'
+						}[messageState.type] || ('info' as any)
+					"
+					:to="safeMessageLink || undefined"
+					:target="safeMessageLink ? '_blank' : undefined"
+					class="justify-center"
+				/>
+			</div>
+		</div>
+
+		<div class="border-t pt-4">
 			<h3 class="text-lg font-semibold mb-4">Social Media</h3>
 
 			<div class="space-y-4">
@@ -451,7 +575,38 @@ const state = reactive<SettingsInput>({
 	patreon: '',
 	linkedin: '',
 	discord: '',
-	supportEmail: ''
+	supportEmail: '',
+	message: {
+		text: '',
+		type: 'info',
+		ttl: 0
+	}
+});
+
+const messageState = computed(() => {
+	if (!state.message) {
+		state.message = {
+			text: '',
+			type: 'info',
+			ttl: 0
+		};
+	}
+
+	return state.message;
+});
+
+const safeMessageLink = computed(() => {
+	const link = (messageState.value.link || '').trim();
+	if (!link) return '';
+
+	try {
+		const url = new URL(link);
+		if (url.protocol !== 'http:' && url.protocol !== 'https:') return '';
+		if (!url.hostname) return '';
+		return url.toString();
+	} catch {
+		return '';
+	}
 });
 
 const loading = ref(false);

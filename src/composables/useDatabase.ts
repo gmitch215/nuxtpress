@@ -97,7 +97,7 @@ export function useBlogPost(id: string) {
 }
 
 export function useSettings() {
-	const settings = useState<{
+	type SettingsState = {
 		name?: string;
 		description?: string;
 		bio?: string;
@@ -113,10 +113,19 @@ export function useSettings() {
 		linkedin?: string;
 		discord?: string;
 		supportEmail?: string;
-	}>('blog-settings', () => ({}));
+		message?: {
+			text: string;
+			icon?: string | null;
+			ttl: number;
+			type: 'success' | 'warning' | 'error' | 'info';
+			link?: string | null;
+		} | null;
+	};
+
+	const settings = useState<SettingsState>('blog-settings', () => ({}));
 
 	const fetchSettings = async () => {
-		const res = await $fetch('/api/settings', {
+		const res = await $fetch<SettingsState>('/api/settings', {
 			method: 'GET'
 		});
 

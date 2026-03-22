@@ -33,7 +33,8 @@ export default defineNuxtConfig({
 	serverDir: 'src/server',
 	css: ['~/assets/css/main.css', '~/assets/css/prose.scss'],
 	vite: {
-		plugins: [tailwindcss()],
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		plugins: [tailwindcss() as any],
 		css: {
 			devSourcemap: true,
 			transformer: 'lightningcss'
@@ -46,7 +47,8 @@ export default defineNuxtConfig({
 				'prosemirror-state',
 				'prosemirror-view',
 				'prosemirror-model',
-				'prosemirror-transform'
+				'prosemirror-transform',
+				'dompurify'
 			]
 		}
 	},
@@ -83,6 +85,7 @@ export default defineNuxtConfig({
 		'@nuxtjs/sitemap',
 		'nuxt-schema-org',
 		'@nuxt/image',
+		'@nuxt/hints',
 		[
 			'@nuxtjs/google-fonts',
 			{
@@ -133,5 +136,9 @@ export default defineNuxtConfig({
 				'Cache-Control': 'public, max-age=31536000, immutable'
 			}
 		}
+	},
+	experimental: {
+		renderJsonPayloads: true,
+		viewTransition: true
 	}
 });

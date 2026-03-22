@@ -11,8 +11,7 @@ export async function ensureLoggedIn(event: H3Event) {
 	}
 
 	const token = getCookie(event, 'admin');
-	const ip = getRequestIP(event);
-	const sessionId = ip || getCookie(event, 'admin_session_id');
+	const sessionId = getCookie(event, 'admin_session_id');
 
 	if (!token) {
 		throw createError({

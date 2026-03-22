@@ -21,7 +21,8 @@ export default defineEventHandler(async (event) => {
 		patreon,
 		linkedin,
 		discord,
-		supportEmail
+		supportEmail,
+		message
 	} = await readBody(event);
 
 	if (name) {
@@ -194,6 +195,13 @@ export default defineEventHandler(async (event) => {
 	}
 
 	if (supportEmail) {
+		if (supportEmail.length > 255) {
+			throw createError({
+				statusCode: 400,
+				statusMessage: 'Support email cannot be longer than 255 characters'
+			});
+		}
+
 		// Basic email validation
 		const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 		if (!emailPattern.test(supportEmail)) {
@@ -204,6 +212,50 @@ export default defineEventHandler(async (event) => {
 		}
 
 		await kv.set('nuxtpress:setting:support_email', supportEmail);
+	}
+
+	if (message) {
+		if (message.text.length > 300) {
+			throw createError({
+				statusCode: 400,
+				statusMessage: 'Message text cannot be longer than 300 characters'
+			});
+		}
+
+		if (message.link && message.link.length > 200) {
+			throw createError({
+				statusCode: 400,
+				statusMessage: 'Message link cannot be longer than 200 characters'
+			});
+		}
+
+		if (message.icon && message.icon.length > 100) {
+			throw createError({
+				statusCode: 400,
+				statusMessage: 'Message icon cannot be longer than 100 characters'
+			});
+		}
+
+		if (!['success', 'warning', 'error', 'info'].includes(message.type)) {
+			throw createError({
+				statusCode: 400,
+				statusMessage: 'Message type must be one of success, warning, error, or info'
+			});
+		}
+
+		const ttl = message.ttl || 0;
+		if (ttl < 0 || ttl > 60 * 60 * 24 * 14) {
+			throw createError({
+				statusCode: 400,
+				statusMessage: 'Message TTL must be a positive number and less than 14 days'
+			});
+		}
+
+		await kv.set(
+			'nuxtpress:setting:message',
+			JSON.stringify(message),
+			ttl > 0 ? { ttl } : undefined
+		);
 	}
 
 	return {
@@ -219,6 +271,7 @@ export default defineEventHandler(async (event) => {
 		patreon: patreon || config.public.patreon,
 		linkedin: linkedin || config.public.linkedin,
 		discord: discord || config.public.discord,
-		supportEmail: supportEmail || config.public.supportEmail
+		supportEmail: supportEmail || config.public.supportEmail,
+		message: message || null
 	};
 });

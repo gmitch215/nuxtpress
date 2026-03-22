@@ -46,29 +46,26 @@ export default defineEventHandler(async (event) => {
 
 	// generate secure unpredictable token
 	const token = crypto.getRandomValues(new Uint8Array(32)).join('');
-	const ip = getRequestIP(event);
-	const sessionId = ip || `session_${crypto.getRandomValues(new Uint8Array(16)).join('')}`;
+	const sessionId = `session_${crypto.getRandomValues(new Uint8Array(16)).join('')}`;
+	const secure = process.env.NODE_ENV === 'production';
 
 	// store it server-side
-	kv.set(`nuxtpress:admin_session:${sessionId}`, token, { ttl: 60 * 60 * 24 * 14 }); // 14 days
+	await kv.set(`nuxtpress:admin_session:${sessionId}`, token, { ttl: 60 * 60 * 24 * 14 }); // 14 days
 	setCookie(event, 'admin', token, {
 		httpOnly: true,
 		sameSite: 'strict',
-		secure: true,
+		secure,
 		maxAge: 60 * 60 * 24 * 14,
 		path: '/'
 	});
 
-	// store session ID in cookie for clients without IP
-	if (!ip) {
-		setCookie(event, 'admin_session_id', sessionId, {
-			httpOnly: true,
-			sameSite: 'strict',
-			secure: true,
-			maxAge: 60 * 60 * 24 * 14,
-			path: '/'
-		});
-	}
+	setCookie(event, 'admin_session_id', sessionId, {
+		httpOnly: true,
+		sameSite: 'strict',
+		secure,
+		maxAge: 60 * 60 * 24 * 14,
+		path: '/'
+	});
 
 	return { ok: true };
 });

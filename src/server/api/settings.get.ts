@@ -23,6 +23,40 @@ export default defineEventHandler(async (_) => {
 	const discord = (await kv.get<string>('nuxtpress:setting:discord')) || config.public.discord;
 	const supportEmail =
 		(await kv.get<string>('nuxtpress:setting:support_email')) || config.public.supportEmail;
+	const rawMessage = await kv.get<string | Record<string, unknown>>('nuxtpress:setting:message');
+	let message: {
+		text: string;
+		icon?: string | null;
+		ttl: number;
+		type: 'success' | 'warning' | 'error' | 'info';
+		link?: string | null;
+	} | null = null;
+	try {
+		const parsed =
+			typeof rawMessage === 'string' ? (rawMessage ? JSON.parse(rawMessage) : null) : rawMessage;
+
+		if (
+			parsed &&
+			typeof parsed === 'object' &&
+			typeof parsed.text === 'string' &&
+			typeof parsed.ttl === 'number' &&
+			['success', 'warning', 'error', 'info'].includes(String(parsed.type))
+		) {
+			message = {
+				text: parsed.text,
+				icon: typeof parsed.icon === 'string' ? parsed.icon : null,
+				ttl: parsed.ttl,
+				type: parsed.type as 'success' | 'warning' | 'error' | 'info',
+				link: typeof parsed.link === 'string' ? parsed.link : null
+			};
+		} else {
+			message = null;
+		}
+	} catch (e) {
+		// If message is not valid JSON, ignore it and return null
+		console.error('Failed to parse message from KV:', e);
+		message = null;
+	}
 
 	return {
 		name,
@@ -39,6 +73,7 @@ export default defineEventHandler(async (_) => {
 		patreon,
 		linkedin,
 		discord,
-		supportEmail
+		supportEmail,
+		message
 	};
 });

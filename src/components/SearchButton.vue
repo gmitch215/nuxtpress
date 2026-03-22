@@ -8,7 +8,7 @@
 		/>
 
 		<template #content>
-			<UCommandPalette
+			<LazyUCommandPalette
 				v-model:search-term="search"
 				:loading="status === 'pending'"
 				:groups="groups"

@@ -46,8 +46,35 @@ export const settingsSchema = z.object({
 		)
 		.optional()
 		.or(z.literal('')),
-	supportEmail: z.email('Must be a valid email').optional().or(z.literal('')),
-	bio: z.string().max(500, 'Bio must be 500 characters or less').optional()
+	supportEmail: z
+		.email('Must be a valid email')
+		.max(255, 'Email must be 255 characters or less')
+		.optional()
+		.or(z.literal('')),
+	bio: z.string().max(500, 'Bio must be 500 characters or less').optional(),
+	message: z
+		.object({
+			text: z
+				.string()
+				.min(1, 'Message text is required')
+				.max(300, 'Message text must be 300 characters or less'),
+			icon: z
+				.string()
+				.max(100, 'Message icon must be 100 characters or less')
+				.optional()
+				.or(z.literal('')),
+			ttl: z
+				.number()
+				.min(0, 'TTL cannot be negative')
+				.max(14 * 24 * 60 * 60, 'TTL cannot be longer than 14 days'),
+			type: z.enum(['success', 'warning', 'error', 'info']),
+			link: z
+				.url('Link must be a valid URL')
+				.max(200, 'Link must be 200 characters or less')
+				.optional()
+				.or(z.literal(''))
+		})
+		.optional()
 });
 
 export type BlogPostInput = z.infer<typeof blogPostSchema>;
