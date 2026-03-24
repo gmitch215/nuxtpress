@@ -10,6 +10,13 @@
 			size="lg"
 		/>
 		<UButton
+			icon="mdi:rss"
+			color="warning"
+			variant="outline"
+			@click="feedOpen = true"
+			size="lg"
+		/>
+		<UButton
 			v-if="loggedIn"
 			icon="mdi:plus"
 			color="primary"
@@ -126,12 +133,51 @@
 			/>
 		</template>
 	</UModal>
+	<UModal
+		v-model:open="feedOpen"
+		title="RSS Feed"
+		class="min-w-120"
+	>
+		<template #body>
+			<div class="flex flex-col gap-2">
+				<h1 class="font-medium text-sm">
+					Subscribe to the RSS feed to learn more: {{ description }}
+				</h1>
+				<UInput
+					disabled
+					:model-value="`${hostname}/feed.xml`"
+				/>
+				<div class="flex gap-2 w-full">
+					<UButton
+						color="warning"
+						icon="mdi:content-copy"
+						@click="copyToClipboard"
+						class="w-7/12"
+					>
+						Copy to Clipboard
+					</UButton>
+
+					<UButton
+						color="primary"
+						:to="`${hostname}/feed.xml`"
+						target="_blank"
+						icon="mdi:web"
+						class="w-5/12"
+					>
+						View RSS Feed
+					</UButton>
+				</div>
+			</div>
+		</template>
+	</UModal>
 </template>
 
 <script setup lang="ts">
 const { posts, fetchPosts } = useBlogPosts();
 const { loggedIn, isLoggedIn } = useLogin();
-const { fetchSettings } = useSettings();
+const { settings, fetchSettings } = useSettings();
+
+const config = useRuntimeConfig();
 
 // Check login state during SSR
 await isLoggedIn();
@@ -164,4 +210,13 @@ const years = computed(() => {
 	});
 	return Array.from(yearSet).sort((a, b) => b - a);
 });
+
+const hostname =
+	config.public.site_url || typeof window !== 'undefined' ? window.location.origin : '';
+const description = settings.value.description || config.public.description;
+const feedOpen = ref(false);
+
+function copyToClipboard() {
+	navigator.clipboard.writeText(`${hostname}/rss.xml`);
+}
 </script>

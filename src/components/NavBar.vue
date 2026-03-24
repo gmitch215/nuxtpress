@@ -146,6 +146,7 @@
 		:icon="settings.message.icon"
 		:color="settings.message.type"
 		:to="settings.message.link || undefined"
+		close
 		class="mb-4"
 	/>
 </template>
