@@ -11,7 +11,9 @@
 				hydrate-on-visible
 			/>
 		</UBlogPosts>
-		<span class="text-gray-500 light:text-gray-400">{{ displayed.length }} total post(s)</span>
+		<LazyClientOnly>
+			<span class="text-gray-500 light:text-gray-400">{{ displayed.length }} total post(s)</span>
+		</LazyClientOnly>
 	</div>
 </template>
 
