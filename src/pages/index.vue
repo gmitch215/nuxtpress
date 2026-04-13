@@ -212,11 +212,11 @@ const years = computed(() => {
 });
 
 const hostname =
-	config.public.site_url || typeof window !== 'undefined' ? window.location.origin : '';
+	config.public.site_url || (typeof window !== 'undefined' ? window.location.origin : '');
 const description = settings.value.description || config.public.description;
 const feedOpen = ref(false);
 
 function copyToClipboard() {
-	navigator.clipboard.writeText(`${hostname}/rss.xml`);
+	navigator.clipboard.writeText(`${hostname}/feed.xml`);
 }
 </script>

@@ -1,52 +1,55 @@
 import hljs from 'highlight.js';
 import { kv } from 'hub:kv';
 import { marked } from 'marked';
-import { create } from 'xmlbuilder2';
-import { BlogPost } from '~/shared/types';
+import type { BlogPost } from '~/shared/types';
+
+function escapeXml(value: string): string {
+	return value
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&apos;');
+}
+
+function normalizeDate(value: Date | string | undefined): Date {
+	const date = value ? new Date(value) : new Date(NaN);
+	return Number.isNaN(date.getTime()) ? new Date(0) : date;
+}
+
+function byteLength(value: string): number {
+	return new TextEncoder().encode(value).byteLength;
+}
+
+const FEED_CACHE_KEY = 'nuxtpress:feed_xml:v2';
 
 export default defineEventHandler(async (event) => {
 	const config = useRuntimeConfig();
 
-	const feed = await kv.get<string>('nuxtpress:feed_xml');
-	if (feed) {
+	const cachedFeed = await kv.get<string>(FEED_CACHE_KEY);
+	if (cachedFeed) {
 		setHeader(event, 'Content-Type', 'application/atom+xml; charset=utf-8');
 		setHeader(event, 'Cache-Control', 'public, max-age=3600');
-		setHeader(event, 'Content-Length', Buffer.byteLength(feed));
-		return feed;
+		setHeader(event, 'Content-Length', byteLength(cachedFeed));
+		return cachedFeed;
 	}
 
 	// construct feed dynamically as fallback
 	const posts = await $fetch<BlogPost[]>('/api/blog/list');
 	const allTags = new Set<string>();
+	let mostRecentUpdate = new Date(0);
+
 	posts.forEach((post) => {
 		(post.tags || []).forEach((tag) => allTags.add(tag));
+
+		const updatedAt = normalizeDate(post.updated_at || post.created_at);
+		if (updatedAt.getTime() > mostRecentUpdate.getTime()) {
+			mostRecentUpdate = updatedAt;
+		}
 	}); // find all tags for categories
-	const mostRecentUpate = posts.reduce((latest, post) => {
-		const updatedAt = new Date(post.updated_at) || new Date(post.created_at);
-		return updatedAt.getTime() > latest.getTime() ? updatedAt : latest;
-	}, new Date(0)); // find latest updated_at
-	const url = config.public.site_url || 'http://localhost:8787';
 
-	const doc = create({ version: '1.0', encoding: 'utf-8' });
-	const root = doc.ele('feed', { xmlns: 'http://www.w3.org/2005/Atom' });
-
-	root.ele('title').txt(config.public.name || 'NuxtPress Site');
-	root.ele('subtitle').txt(config.public.description || 'A NuxtPress powered site');
-	root.ele('link', { href: url, rel: 'self' });
-	root.ele('updated').txt(mostRecentUpate.toISOString());
-	root.ele('id').txt(url);
-	root.ele('generator').txt('NuxtPress');
-
-	for (const tag of allTags) {
-		const category = root.ele('category');
-		category.att('term', tag);
-	}
-
-	const author = root.ele('author');
-	author.ele('name').txt(config.public.author || config.public.name || 'NuxtPress');
-	if (config.public.supportEmail) {
-		author.ele('email').txt(config.public.supportEmail);
-	}
+	const url = (config.public.site_url || 'http://localhost:8787').replace(/\/+$/, '');
+	const authorName = config.public.author || config.public.name || 'NuxtPress';
 
 	const renderer = new marked.Renderer();
 	renderer.code = ({ text, lang }) => {
@@ -61,51 +64,76 @@ export default defineEventHandler(async (event) => {
 		}
 	};
 
-	for (const post of posts) {
-		const entry = root.ele('entry');
-		const createdAt = new Date(post.created_at);
-		const updatedAt = new Date(post.updated_at) || new Date(post.created_at);
-		const fullSlug = `${createdAt.getUTCFullYear()}/${createdAt.getUTCMonth() + 1}/${createdAt.getUTCDate()}/${post.slug}`;
+	const feedCategoriesXml = Array.from(allTags)
+		.map((tag) => `  <category term="${escapeXml(tag)}" />`)
+		.join('\n');
 
-		entry.ele('title').txt(post.title);
-		entry.ele('link', {
-			href: `${url}/${fullSlug}`
-		});
-		entry.ele('id').txt(`${url}/${fullSlug}`);
-		entry.ele('updated').txt(updatedAt.toISOString());
-		entry.ele('published').txt(createdAt.toISOString());
+	const entriesXml = posts
+		.map((post) => {
+			const createdAt = normalizeDate(post.created_at);
+			const updatedAt = normalizeDate(post.updated_at || post.created_at);
+			const fullSlug = `${createdAt.getUTCFullYear()}/${createdAt.getUTCMonth() + 1}/${createdAt.getUTCDate()}/${post.slug}`;
+			const entryUrl = `${url}/${fullSlug}`;
 
-		for (const tag of post.tags || []) {
-			const category = entry.ele('category');
-			category.att('term', tag);
-		}
+			const categoriesXml = (post.tags || [])
+				.map((tag) => `    <category term="${escapeXml(tag)}" />`)
+				.join('\n');
 
-		// strip markdown for plain text summary
-		const summary = entry.ele('summary', { type: 'html' });
-		const plainText = post.content
-			? post.content.replace(/[#_*>\-\n]/g, '').slice(0, 200) + '...'
-			: '';
-		summary.txt(plainText);
+			const plainText = post.content
+				? `${post.content.replace(/[#_*>\-\n]/g, '').slice(0, 200)}...`
+				: '';
 
-		// render markdown to HTML using the same configuration as useMarkdown
-		const html = marked(post.content || '', {
-			renderer: renderer,
-			breaks: true,
-			gfm: true
-		});
-		const renderedContent = typeof html === 'string' ? html : '';
+			const html = marked(post.content || '', {
+				renderer: renderer,
+				breaks: true,
+				gfm: true
+			});
+			const renderedContent = typeof html === 'string' ? html : '';
 
-		const content = entry.ele('content', { type: 'html' });
-		content.txt(renderedContent);
-	}
+			return [
+				'  <entry>',
+				`    <title>${escapeXml(post.title || 'Untitled')}</title>`,
+				`    <link href="${escapeXml(entryUrl)}" />`,
+				`    <id>${escapeXml(entryUrl)}</id>`,
+				`    <updated>${updatedAt.toISOString()}</updated>`,
+				`    <published>${createdAt.toISOString()}</published>`,
+				categoriesXml,
+				`    <summary type="html">${escapeXml(plainText)}</summary>`,
+				`    <content type="html">${escapeXml(renderedContent)}</content>`,
+				'  </entry>'
+			]
+				.filter(Boolean)
+				.join('\n');
+		})
+		.join('\n');
 
-	// serve generated posts
-	const xml = root.end({ prettyPrint: true });
+	const xml = [
+		'<?xml version="1.0" encoding="utf-8"?>',
+		'<feed xmlns="http://www.w3.org/2005/Atom">',
+		`  <title>${escapeXml(config.public.name || 'NuxtPress Site')}</title>`,
+		`  <subtitle>${escapeXml(config.public.description || 'A NuxtPress powered site')}</subtitle>`,
+		`  <link href="${escapeXml(`${url}/feed.xml`)}" rel="self" />`,
+		`  <link href="${escapeXml(url)}" rel="alternate" />`,
+		`  <updated>${mostRecentUpdate.toISOString()}</updated>`,
+		`  <id>${escapeXml(url)}</id>`,
+		'  <generator>NuxtPress</generator>',
+		feedCategoriesXml,
+		'  <author>',
+		`    <name>${escapeXml(authorName)}</name>`,
+		config.public.supportEmail ? `    <email>${escapeXml(config.public.supportEmail)}</email>` : '',
+		'  </author>',
+		entriesXml,
+		'</feed>'
+	]
+		.filter(Boolean)
+		.join('\n');
+
+	// serve generated feed
 	setHeader(event, 'Content-Type', 'application/atom+xml; charset=utf-8');
 	setHeader(event, 'Cache-Control', 'public, max-age=3600');
-	setHeader(event, 'Content-Length', Buffer.byteLength(xml));
+	setHeader(event, 'Content-Length', byteLength(xml));
 
 	// cache for future requests
-	await kv.set('nuxtpress:feed_xml', xml, { ttl: 3600 });
+	await kv.set(FEED_CACHE_KEY, xml, { ttl: 3600 });
 	return xml;
 });
