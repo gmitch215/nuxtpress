@@ -72,6 +72,7 @@ export default defineEventHandler(async (event) => {
 
 	// Invalidate caches
 	await kv.del('nuxtpress:blog_posts_list');
+	await kv.del('nuxtpress:blog_posts_list:v1');
 
 	return {
 		id,

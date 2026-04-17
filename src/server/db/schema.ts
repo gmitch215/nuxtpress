@@ -20,7 +20,8 @@ export const blogPosts = sqliteTable(
 	},
 	(table) => [
 		index('idx_blog_posts_slug').on(table.slug),
-		index('idx_blog_posts_created_at').on(table.createdAt)
+		index('idx_blog_posts_created_at').on(table.createdAt),
+		index('idx_blog_posts_slug_created_at').on(table.slug, table.createdAt)
 	]
 );
 

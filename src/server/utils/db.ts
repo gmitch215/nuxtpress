@@ -5,7 +5,17 @@ import { kv } from 'hub:kv';
 let isInitialized = false;
 let initPromise: Promise<void> | null = null;
 
-const CURRENT_MIGRATION_VERSION = 1;
+const CURRENT_MIGRATION_VERSION = 2;
+const MIGRATION_VERSION_KEY = 'nuxtpress:db_migration_version';
+
+async function hasBlogPostsTable() {
+	try {
+		await db.run(sql`SELECT 1 FROM blog_posts LIMIT 1`);
+		return true;
+	} catch {
+		return false;
+	}
+}
 
 /**
  * Ensures the database table exists and is migrated.
@@ -14,16 +24,29 @@ const CURRENT_MIGRATION_VERSION = 1;
 export async function ensureDatabase() {
 	if (isInitialized) return;
 
-	const cachedVersion = await kv.get<number>('nuxtpress:db_migration_version');
-	if (cachedVersion === CURRENT_MIGRATION_VERSION) {
-		isInitialized = true;
-		return;
-	}
-
 	if (initPromise) return initPromise;
 
 	initPromise = (async () => {
 		try {
+			let cachedVersion: number | null = null;
+			try {
+				cachedVersion = await kv.get<number>(MIGRATION_VERSION_KEY);
+			} catch (error) {
+				console.warn('Unable to read migration version cache:', error);
+			}
+
+			if (cachedVersion === CURRENT_MIGRATION_VERSION) {
+				const tableExists = await hasBlogPostsTable();
+				if (tableExists) {
+					isInitialized = true;
+					return;
+				}
+
+				console.warn(
+					'Migration cache version matched but blog_posts was unavailable. Re-running migrations.'
+				);
+			}
+
 			console.log('📦 Running database migrations...');
 
 			await db.run(sql`
@@ -44,6 +67,9 @@ export async function ensureDatabase() {
 			await db.run(
 				sql`CREATE INDEX IF NOT EXISTS idx_blog_posts_created_at ON blog_posts(created_at)`
 			);
+			await db.run(
+				sql`CREATE INDEX IF NOT EXISTS idx_blog_posts_slug_created_at ON blog_posts(slug, created_at)`
+			);
 
 			// Migration: Convert ISO string timestamps to integer milliseconds
 			const isoFormatCheck = await db.run(sql`
@@ -55,7 +81,7 @@ export async function ensureDatabase() {
 			if (
 				isoFormatCheck.rows &&
 				isoFormatCheck.rows.length > 0 &&
-				(isoFormatCheck.rows[0] as any).count > 0
+				Number((isoFormatCheck.rows[0] as any).count) > 0
 			) {
 				console.log('📝 Converting ISO timestamp strings to integers...');
 
@@ -98,7 +124,7 @@ export async function ensureDatabase() {
 			if (
 				oldFormatCheck.rows &&
 				oldFormatCheck.rows.length > 0 &&
-				(oldFormatCheck.rows[0] as any).count > 0
+				Number((oldFormatCheck.rows[0] as any).count) > 0
 			) {
 				console.log('📝 Converting second timestamps to milliseconds...');
 				await db.run(sql`
@@ -112,16 +138,28 @@ export async function ensureDatabase() {
 			}
 
 			console.log('✓ Database migrations completed');
+
+			const tableExists = await hasBlogPostsTable();
+			if (!tableExists) {
+				throw new Error('Database initialization verification failed for blog_posts');
+			}
+
+			isInitialized = true;
+
+			try {
+				await kv.set(MIGRATION_VERSION_KEY, CURRENT_MIGRATION_VERSION);
+			} catch (error) {
+				console.warn('Unable to cache migration version in KV:', error);
+			}
 		} catch (error: any) {
 			console.error('Database migration error:', error);
-			// Don't throw - let the app continue, it might be a permission issue
-			// The migrations might have already run
-		} finally {
-			isInitialized = true;
-			await kv.set('nuxtpress:db_migration_version', CURRENT_MIGRATION_VERSION);
+			throw error;
 		}
 	})();
 
-	await initPromise;
-	initPromise = null;
+	try {
+		await initPromise;
+	} finally {
+		initPromise = null;
+	}
 }

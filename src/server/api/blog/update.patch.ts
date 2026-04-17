@@ -62,18 +62,23 @@ export default defineEventHandler(async (event) => {
 
 	// invalidate caches
 	await kv.del('nuxtpress:blog_posts_list');
+	await kv.del('nuxtpress:blog_posts_list:v1');
 	await kv.del(`nuxtpress:slug_exists:${post.slug}`);
 
 	if (oldPost) {
 		const oldDate = new Date(oldPost.createdAt);
 		const oldCacheKey = `nuxtpress:blog_post:${oldPost.slug}:${oldDate.getUTCFullYear()}:${oldDate.getUTCMonth() + 1}:${oldDate.getUTCDate()}`;
+		const oldCacheKeyV2 = `nuxtpress:blog_post:v2:${oldPost.slug}:${oldDate.getUTCFullYear()}:${oldDate.getUTCMonth() + 1}:${oldDate.getUTCDate()}`;
 		await kv.del(oldCacheKey);
+		await kv.del(oldCacheKeyV2);
 
 		if (oldPost.slug !== post.slug) {
 			await kv.del(`nuxtpress:slug_exists:${oldPost.slug}`);
 		}
 
 		const newCacheKey = `nuxtpress:blog_post:${post.slug}:${oldDate.getUTCFullYear()}:${oldDate.getUTCMonth() + 1}:${oldDate.getUTCDate()}`;
+		const newCacheKeyV2 = `nuxtpress:blog_post:v2:${post.slug}:${oldDate.getUTCFullYear()}:${oldDate.getUTCMonth() + 1}:${oldDate.getUTCDate()}`;
 		await kv.del(newCacheKey);
+		await kv.del(newCacheKeyV2);
 	}
 });

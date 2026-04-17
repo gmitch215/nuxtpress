@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, desc, eq, gte, lt } from 'drizzle-orm';
 import { db } from 'hub:db';
 import { kv } from 'hub:kv';
 import { blogPosts } from '~/server/db/schema';
@@ -32,44 +32,74 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const cacheKey = `nuxtpress:blog_post:${slug}:${year}:${month}:${day}`;
+	const year0 = Number(year);
+	const month0 = Number(month);
+	const day0 = Number(day);
+
+	if (
+		!Number.isInteger(year0) ||
+		!Number.isInteger(month0) ||
+		!Number.isInteger(day0) ||
+		year0 < 2000 ||
+		year0 > new Date().getUTCFullYear() + 1 ||
+		month0 < 1 ||
+		month0 > 12 ||
+		day0 < 1 ||
+		day0 > 31
+	) {
+		throw createError({
+			statusCode: 400,
+			statusMessage: 'Date is out of range'
+		});
+	}
+
+	const cacheKey = `nuxtpress:blog_post:v2:${slug}:${year0}:${month0}:${day0}`;
 
 	// Check cache first
 	const cached = await kv.get(cacheKey);
 	if (cached && typeof cached === 'string') {
-		return JSON.parse(cached);
+		try {
+			return JSON.parse(cached);
+		} catch {
+			await kv.del(cacheKey);
+		}
 	}
 
-	// Get all posts with the same slug
-	const rows = await db.select().from(blogPosts).where(eq(blogPosts.slug, slug));
+	const startOfDayUtcMs = Date.UTC(year0, month0 - 1, day0, 0, 0, 0, 0);
+	const endOfDayUtcMs = startOfDayUtcMs + 24 * 60 * 60 * 1000;
 
-	const posts = rows.map((row) => ({
-		...row,
-		created_at: new Date(row.createdAt),
-		updated_at: new Date(row.updatedAt),
-		thumbnail: row.thumbnail
-			? Uint8Array.from(atob(row.thumbnail), (c) => c.charCodeAt(0))
-			: undefined,
-		thumbnail_url: row.thumbnailUrl,
-		tags: row.tags ? row.tags.split(',').map((t: string) => t.trim()) : []
-	})) as BlogPost[];
+	const rows = await db
+		.select()
+		.from(blogPosts)
+		.where(
+			and(
+				eq(blogPosts.slug, slug),
+				gte(blogPosts.createdAt, new Date(startOfDayUtcMs)),
+				lt(blogPosts.createdAt, new Date(endOfDayUtcMs))
+			)
+		)
+		.orderBy(desc(blogPosts.createdAt))
+		.limit(1);
 
-	if (!posts || posts.length === 0) {
+	const row = rows[0];
+
+	if (!row) {
 		throw createError({
 			statusCode: 404,
 			statusMessage: 'Post not found'
 		});
 	}
 
-	// Construct the target date from the URL params
-	const targetDate = new Date(Number(year), Number(month) - 1, Number(day));
-
-	// Find the post with the closest date to the target
-	const res = posts.reduce((closest, current) => {
-		const closestDiff = Math.abs(closest.created_at.getTime() - targetDate.getTime());
-		const currentDiff = Math.abs(current.created_at.getTime() - targetDate.getTime());
-		return currentDiff < closestDiff ? current : closest;
-	});
+	const res = {
+		...row,
+		created_at: new Date(row.createdAt),
+		updated_at: new Date(row.updatedAt),
+		thumbnail: row.thumbnail
+			? Uint8Array.from(atob(row.thumbnail), (c) => c.charCodeAt(0))
+			: undefined,
+		thumbnail_url: row.thumbnailUrl || undefined,
+		tags: row.tags ? row.tags.split(',').map((t: string) => t.trim()) : []
+	} as BlogPost;
 
 	// Cache the result
 	await kv.set(cacheKey, JSON.stringify(res), { ttl: 60 * 60 * 4 }); // 4 hours
