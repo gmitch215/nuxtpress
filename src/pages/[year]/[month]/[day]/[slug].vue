@@ -323,27 +323,52 @@ const { data: post, error } = await useAsyncData(
 	async () => {
 		if (!isValidDate) return null;
 
-		try {
-			const res = await $fetch<BlogPost>(
-				`/api/blog/find?slug=${slug0.value}&year=${year0}&month=${month0}&day=${day0}`,
-				{
-					method: 'GET'
-				}
-			);
+		const res = await $fetch<BlogPost>('/api/blog/find', {
+			method: 'GET',
+			query: {
+				slug: slug0.value,
+				year: year0,
+				month: month0,
+				day: day0
+			}
+		});
 
-			// ensure dates are Date objects (in case they come from cache as strings)
-			return {
-				...res,
-				created_at: new Date(res.created_at),
-				updated_at: new Date(res.updated_at)
-			};
-		} catch (error) {
-			return null;
-		}
+		// ensure dates are Date objects (in case they come from cache as strings)
+		return {
+			...res,
+			created_at: new Date(res.created_at),
+			updated_at: new Date(res.updated_at)
+		};
 	}
 );
 
-if (error.value || !post.value) {
+if (error.value) {
+	const err = error.value as {
+		statusCode?: number;
+		status?: number;
+		statusMessage?: string;
+		message?: string;
+	};
+	const statusCode0 = err.statusCode ?? err.status ?? 500;
+	const statusCode = Number.isFinite(Number(statusCode0)) ? Number(statusCode0) : 500;
+
+	if (statusCode === 404) {
+		throw createError({
+			statusCode: 404,
+			statusMessage: 'Blog Post Not Found',
+			message: `The blog post you're looking for doesn't exist or may have been removed.`,
+			fatal: false
+		});
+	}
+
+	throw createError({
+		statusCode,
+		statusMessage: err.statusMessage || err.message || 'Unable to load blog post',
+		fatal: false
+	});
+}
+
+if (!post.value) {
 	throw createError({
 		statusCode: 404,
 		statusMessage: 'Blog Post Not Found',
@@ -352,16 +377,78 @@ if (error.value || !post.value) {
 	});
 }
 
+const localThumbnailUrl = ref<string | null>(null);
+
+function revokeLocalThumbnailUrl() {
+	if (
+		import.meta.client &&
+		localThumbnailUrl.value &&
+		typeof URL !== 'undefined' &&
+		typeof URL.revokeObjectURL === 'function'
+	) {
+		URL.revokeObjectURL(localThumbnailUrl.value);
+	}
+
+	localThumbnailUrl.value = null;
+}
+
+function toThumbnailBytes(value: unknown): Uint8Array | null {
+	if (!value) return null;
+
+	if (value instanceof Uint8Array) {
+		return value;
+	}
+
+	if (Array.isArray(value)) {
+		return Uint8Array.from(value.filter((v): v is number => typeof v === 'number'));
+	}
+
+	if (typeof value === 'object') {
+		const entries = Object.entries(value as Record<string, unknown>)
+			.filter(([key, v]) => /^\d+$/.test(key) && typeof v === 'number')
+			.sort((a, b) => Number(a[0]) - Number(b[0]));
+
+		if (entries.length > 0) {
+			return Uint8Array.from(entries.map(([, v]) => Number(v)));
+		}
+	}
+
+	return null;
+}
+
+watch(
+	() => post.value?.thumbnail,
+	() => {
+		revokeLocalThumbnailUrl();
+
+		if (!import.meta.client || !post.value || post.value.thumbnail_url) {
+			return;
+		}
+
+		if (typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
+			return;
+		}
+
+		const bytes = toThumbnailBytes(post.value.thumbnail as unknown);
+		if (!bytes || bytes.length === 0) {
+			return;
+		}
+
+		const safeBytes = new Uint8Array(bytes.byteLength);
+		safeBytes.set(bytes);
+		localThumbnailUrl.value = URL.createObjectURL(new Blob([safeBytes]));
+	},
+	{ immediate: true }
+);
+
 const thumbnailUrl = computed(() => {
 	if (!post.value) return null;
 
 	if (post.value.thumbnail_url) {
 		return post.value.thumbnail_url;
-	} else if (post.value.thumbnail) {
-		const array = new Uint8Array(post.value.thumbnail);
-		return URL.createObjectURL(new Blob([array]));
 	}
-	return null;
+
+	return localThumbnailUrl.value;
 });
 
 const renderedContent = computed(() => {
@@ -443,9 +530,7 @@ useSchemaOrg([
 ]);
 
 onBeforeUnmount(() => {
-	if (thumbnailUrl.value && post.value?.thumbnail) {
-		URL.revokeObjectURL(thumbnailUrl.value);
-	}
+	revokeLocalThumbnailUrl();
 });
 
 async function deletePost() {
