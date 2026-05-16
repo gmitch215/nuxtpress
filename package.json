@@ -14,7 +14,7 @@
     "prepare": "husky install"
   },
   "peerDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3 || ^6.0.0"
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.20260317.1",
