@@ -59,16 +59,13 @@
 				v-if="thumbnailUrl"
 				class="w-full"
 			>
-				<LazyNuxtImg
-					:src="thumbnailUrl"
+				<img
+					:src="displayThumbnail"
 					:alt="post.title"
-					fit="cover"
-					:preload="{ fetchPriority: 'high' }"
-					format="webp"
-					quality="85"
-					sizes="sm:100vw md:896px lg:896px"
+					fetchpriority="high"
+					decoding="async"
 					class="w-full h-auto rounded-lg shadow-lg min-h-50 max-h-96 object-cover"
-					hydrate-on-visible
+					@error="thumbnailFailed = true"
 				/>
 			</div>
 
@@ -81,9 +78,21 @@
 				style="contain-intrinsic-size: auto 500px"
 			/>
 			<footer class="pt-8 border-t border-gray-200 dark:border-gray-800">
-				<div class="text-sm text-gray-500 dark:text-gray-400">
-					Post by {{ settings.author || $config.public.author }} | Last updated:
-					{{ formatDate(post.updated_at) }}
+				<div class="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+					<NuxtLink
+						v-if="post.author?.username"
+						:to="`/authors/${post.author.username}`"
+						class="flex items-center gap-2 hover:underline"
+					>
+						<Avatar
+							:pathname="post.author.avatarPathname"
+							:display-name="post.author.displayName"
+							size="sm"
+						/>
+						<span>{{ post.author.displayName }}</span>
+					</NuxtLink>
+					<span v-else>Post by {{ settings.author || $config.public.author }}</span>
+					<span>| Last updated: {{ formatDate(post.updated_at) }}</span>
 				</div>
 			</footer>
 		</div>
@@ -113,11 +122,8 @@ import { formatDate, type BlogPost } from '~/shared/types';
 
 const { settings } = useSettings();
 const config = useRuntimeConfig();
-const { loggedIn, isLoggedIn } = useLogin();
+const { loggedIn } = useLogin();
 const editorOpen = ref(false);
-
-// Check login state during SSR for better performance
-await isLoggedIn();
 
 const route = useRoute();
 const router = useRouter();
@@ -443,13 +449,18 @@ watch(
 
 const thumbnailUrl = computed(() => {
 	if (!post.value) return null;
-
-	if (post.value.thumbnail_url) {
-		return post.value.thumbnail_url;
-	}
-
+	if (post.value.thumbnail_url) return post.value.thumbnail_url;
 	return localThumbnailUrl.value;
 });
+
+const thumbnailFailed = ref(false);
+watch(thumbnailUrl, () => {
+	thumbnailFailed.value = false;
+});
+
+const displayThumbnail = computed(() =>
+	thumbnailFailed.value ? '/favicon.png' : thumbnailUrl.value
+);
 
 const renderedContent = computed(() => {
 	if (!post.value?.content) return '';
@@ -532,6 +543,10 @@ useSchemaOrg([
 onBeforeUnmount(() => {
 	revokeLocalThumbnailUrl();
 });
+
+const analytics = useAnalytics(() => post.value?.slug || slug0.value);
+onMounted(() => analytics.start());
+onBeforeUnmount(() => analytics.stop());
 
 async function deletePost() {
 	if (!loggedIn.value || !post.value) return;
