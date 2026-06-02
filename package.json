@@ -28,7 +28,7 @@
     "@nuxt/ui": "^4.5.1",
     "@nuxthub/core": "^0.10.7",
     "@nuxtjs/robots": "^5.7.1",
-    "@nuxtjs/sitemap": "^7.6.0",
+    "@nuxtjs/sitemap": "^8.0.0",
     "@tiptap/extension-audio": "^3.20.4",
     "@tiptap/extension-emoji": "^3.20.4",
     "@tiptap/extension-text-align": "^3.20.4",
