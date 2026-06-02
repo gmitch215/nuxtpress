@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
-import { ANON_STATE } from './utils/auth';
-import { adminApi, createPost, deletePost } from './utils/posts';
+import { loginContext } from './utils/auth';
+import { createPost, deletePost } from './utils/posts';
 
-test.describe('post creation, viewing, deletion (admin context)', () => {
+test.describe('post creation, viewing, deletion', () => {
 	test('create post via API and view it on home', async ({ page, request }) => {
 		const slug = `test-post-${Date.now()}`;
 		const post = await createPost(request, {
@@ -17,7 +17,7 @@ test.describe('post creation, viewing, deletion (admin context)', () => {
 		await deletePost(request, post.id);
 	});
 
-	test('admin sees edit + delete buttons on a post', async ({ page, request }) => {
+	test('admin sees edit + delete buttons on a post', async ({ context, page, request }) => {
 		const slug = `t-${Date.now()}`;
 		const post = await createPost(request, {
 			title: 'Editable post',
@@ -28,34 +28,29 @@ test.describe('post creation, viewing, deletion (admin context)', () => {
 		const d = new Date(post.created_at);
 		const url = `/${d.getUTCFullYear()}/${d.getUTCMonth() + 1}/${d.getUTCDate()}/${slug}`;
 
+		await loginContext(context);
 		await page.goto(url);
 		await expect(page.getByRole('heading', { name: 'Editable post' })).toBeVisible();
-		await expect(page.locator('button[icon="mdi:pencil"]').first()).toBeVisible();
-		await expect(page.locator('button[icon="mdi:delete"]').first()).toBeVisible();
+		// admin-only edit/delete buttons live next to the post title heading
+		const adminButtons = page.locator('header button');
+		await expect(adminButtons).toHaveCount(2, { timeout: 5000 });
 
 		await deletePost(request, post.id);
 	});
-});
 
-test.describe('post viewed anonymously', () => {
-	test.use({ storageState: ANON_STATE });
-
-	test('unauthed user does not see admin controls on a post', async ({ page }) => {
-		const admin = await adminApi();
+	test('unauthed user does not see admin controls on a post', async ({ page, request }) => {
 		const slug = `t-${Date.now()}-anon`;
-		const post = await createPost(admin, {
+		const post = await createPost(request, {
 			title: 'Anonymous view',
 			slug,
 			content: 'A post viewed by anonymous users to verify admin gating.'
 		});
-
 		const d = new Date(post.created_at);
 		const url = `/${d.getUTCFullYear()}/${d.getUTCMonth() + 1}/${d.getUTCDate()}/${slug}`;
 		await page.goto(url);
 		await expect(page.getByRole('heading', { name: 'Anonymous view' })).toBeVisible();
-		await expect(page.locator('button[icon="mdi:pencil"]').first()).toBeHidden();
+		await expect(page.locator('header button')).toHaveCount(0);
 
-		await deletePost(admin, post.id);
-		await admin.dispose();
+		await deletePost(request, post.id);
 	});
 });
