@@ -114,10 +114,10 @@
 
 		<div class="flex gap-2">
 			<UButton
-				type="submit"
 				:loading="saving"
 				icon="mdi:content-save"
 				color="primary"
+				@click="onSubmit"
 			>
 				Save changes
 			</UButton>
