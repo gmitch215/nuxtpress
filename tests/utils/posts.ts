@@ -1,11 +1,13 @@
 import type { APIRequestContext } from '@playwright/test';
-import { loginViaApi } from './auth';
+import { request as plRequest } from '@playwright/test';
+import { TEST_ADMIN, loginViaApi } from './auth';
+
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8787';
 
 export async function createPost(
 	request: APIRequestContext,
 	post: { title: string; slug: string; content: string; tags?: string[]; thumbnail_url?: string }
 ) {
-	await loginViaApi(request);
 	const res = await request.post('/api/blog/create', {
 		data: {
 			post: {
@@ -25,7 +27,13 @@ export async function listPosts(request: APIRequestContext) {
 }
 
 export async function deletePost(request: APIRequestContext, id: string) {
-	await loginViaApi(request);
 	const res = await request.delete(`/api/blog/remove?id=${id}`);
 	return res.ok();
+}
+
+/** standalone authed APIRequestContext for tests that run their page in anon mode */
+export async function adminApi() {
+	const ctx = await plRequest.newContext({ baseURL: BASE_URL });
+	await loginViaApi(ctx, TEST_ADMIN);
+	return ctx;
 }

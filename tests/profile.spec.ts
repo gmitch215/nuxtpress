@@ -1,21 +1,23 @@
 import { expect, test } from '@playwright/test';
-import { loginContext } from './utils/auth';
+import { ANON_STATE } from './utils/auth';
 
-test.describe('profile page', () => {
+test.describe('profile page (anon)', () => {
+	test.use({ storageState: ANON_STATE });
+
 	test('unauthed users are redirected to home with login modal', async ({ page }) => {
 		await page.goto('/profile');
 		await expect(page).toHaveURL(/\/(?:\?login=1)?$/);
 	});
+});
 
-	test('logged-in user can view their profile form', async ({ context, page }) => {
-		await loginContext(context);
+test.describe('profile page (admin)', () => {
+	test('logged-in user can view their profile form', async ({ page }) => {
 		await page.goto('/profile');
 		await expect(page.getByRole('heading', { name: /your profile/i })).toBeVisible();
 		await expect(page.getByRole('button', { name: /save changes/i })).toBeVisible();
 	});
 
-	test('user can update display name', async ({ context, page }) => {
-		await loginContext(context);
+	test('user can update display name', async ({ page }) => {
 		await page.goto('/profile');
 		const input = page
 			.locator('input')

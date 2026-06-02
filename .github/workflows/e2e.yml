@@ -1,4 +1,4 @@
-name: End-to-end tests
+name: End-to-End tests
 
 on:
   push:
@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Cache Playwright browsers
+      - name: Cache Playwright Browsers
         id: pw-cache
         uses: actions/cache@v4
         with:
@@ -46,7 +46,7 @@ jobs:
       - name: Prepare Nuxt
         run: bunx nuxi prepare
 
-      - name: Run Playwright tests
+      - name: Run Playwright Tests
         run: bunx playwright test
         env:
           CI: '1'

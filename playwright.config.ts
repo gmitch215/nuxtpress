@@ -3,6 +3,9 @@ import { fileURLToPath } from 'node:url';
 
 const isCI = !!process.env.CI;
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8787';
+export const ADMIN_STORAGE = fileURLToPath(
+	new URL('./playwright-results/.admin-storage.json', import.meta.url)
+);
 
 export default defineConfig({
 	testDir: './tests',
@@ -35,8 +38,14 @@ export default defineConfig({
 	},
 	projects: [
 		{
-			name: 'chromium',
+			name: 'auth-setup',
+			testMatch: /auth\.setup\.ts$/,
 			use: { ...devices['Desktop Chrome'] }
+		},
+		{
+			name: 'chromium',
+			use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE },
+			dependencies: ['auth-setup']
 		}
 	]
 });

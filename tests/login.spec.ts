@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
+import { ANON_STATE } from './utils/auth';
 
-test.describe('login', () => {
+test.use({ storageState: ANON_STATE });
+
+test.describe('login (anon → admin via UI)', () => {
 	test('rejects invalid credentials', async ({ page }) => {
 		await page.goto('/');
 		await page.getByRole('button', { name: /log in/i }).click();
@@ -19,8 +22,10 @@ test.describe('login', () => {
 		await expect(page.getByRole('button', { name: /new post/i })).toBeVisible({ timeout: 10_000 });
 	});
 
-	test('logout clears admin state', async ({ page, request }) => {
-		await request.post('/api/login', { data: { username: 'admin', password: 'adminpass' } });
+	test('logout clears admin state', async ({ page, context }) => {
+		await context.request.post('/api/login', {
+			data: { username: 'admin', password: 'adminpass' }
+		});
 		await page.goto('/');
 		await page.getByRole('button', { name: /new post/i }).waitFor({ timeout: 10_000 });
 		await page.getByTitle(/log out/i).click();

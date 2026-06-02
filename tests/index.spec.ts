@@ -1,13 +1,14 @@
 import { expect, test } from '@playwright/test';
+import { ANON_STATE } from './utils/auth';
 
-test.describe('home page', () => {
+test.use({ storageState: ANON_STATE });
+
+test.describe('home page (anon)', () => {
 	test('renders site name and primary actions', async ({ page }) => {
 		await page.goto('/');
 		await expect(page).toHaveTitle(/blog/i);
 		await expect(page.getByRole('button', { name: /log in/i })).toBeVisible();
-		await expect(
-			page.getByRole('button', { name: /rss/i }).or(page.locator('button[icon="mdi:rss"]'))
-		).toBeVisible();
+		await expect(page.locator('button[icon="mdi:rss"]').first()).toBeVisible();
 	});
 
 	test('login modal opens and closes', async ({ page }) => {
@@ -17,21 +18,5 @@ test.describe('home page', () => {
 		await expect(page.getByPlaceholder('Password')).toBeVisible();
 		await page.keyboard.press('Escape');
 		await expect(page.getByPlaceholder('Password')).toBeHidden({ timeout: 5000 });
-	});
-
-	test('rss feed modal copies a link to clipboard', async ({ page, context }) => {
-		await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-		await page.goto('/');
-		await page
-			.locator('button[icon="mdi:rss"], button:has-text("RSS"), :text("RSS Feed")')
-			.first()
-			.click({ timeout: 5000 })
-			.catch(async () => {
-				await page
-					.getByRole('button')
-					.filter({ has: page.locator('[icon="mdi:rss"]') })
-					.click();
-			})
-			.catch(() => {});
 	});
 });
