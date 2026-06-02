@@ -21,3 +21,9 @@ logs
 .idea
 
 .env.local
+
+# Playwright + coverage
+playwright-report
+playwright-results
+test-results
+coverage
