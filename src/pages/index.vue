@@ -171,7 +171,7 @@
 		class="max-w-[90vw] w-full"
 	>
 		<template #body>
-			<LazyAnalyticsDashboard v-if="analyticsOpen" />
+			<AnalyticsDashboard v-if="analyticsOpen" />
 		</template>
 	</UModal>
 	<UModal
