@@ -12,7 +12,7 @@
 				variant="ghost"
 				size="sm"
 				:loading="pending"
-				@click="refresh"
+				@click="() => refresh()"
 			/>
 		</div>
 
@@ -164,14 +164,14 @@ const rangeOptions = [
 	{ label: 'All', value: 'all' }
 ];
 
-const { data, pending, refresh } = useFetch<Summary>('/api/analytics/summary', {
-	query: { range },
-	credentials: 'include',
-	watch: [range],
-	immediate: true,
-	lazy: true,
-	server: false
-});
+const { data, pending, refresh } = useFetch<Summary>(
+	() => `/api/analytics/summary?range=${range.value}`,
+	{
+		credentials: 'include',
+		lazy: true,
+		server: false
+	}
+);
 
 function formatMs(ms: number) {
 	if (!ms) return '0s';
