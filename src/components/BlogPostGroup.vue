@@ -1,15 +1,28 @@
 <template>
-	<div class="w-full justify-center px-4 sm:px-8 md:px-12 lg:px-24 xl:px-32 mt-8">
+	<div class="w-full justify-center px-4 sm:px-6 md:px-8 mt-8">
 		<UBlogPosts
 			:orientation="$viewport.isLessOrEquals('mobileMedium') ? 'vertical' : 'horizontal'"
 			class="mb-4"
 		>
 			<LazyUBlogPost
 				v-for="(post, index) in displayed"
-				:key="index"
-				v-bind="post"
+				:key="post.to + index"
+				:title="post.title"
+				:description="post.description"
+				:date="post.date"
+				:badge="post.badge"
+				:to="post.to"
 				hydrate-on-visible
-			/>
+			>
+				<template #header>
+					<Thumbnail
+						:src="post.imageSrc"
+						:alt="post.title"
+						:eager="index < 2"
+						:to="post.to"
+					/>
+				</template>
+			</LazyUBlogPost>
 		</UBlogPosts>
 		<LazyClientOnly>
 			<span class="text-gray-500 light:text-gray-400">{{ displayed.length }} total post(s)</span>
@@ -20,19 +33,14 @@
 <script setup lang="ts">
 import type { BlogPost } from '~/shared/types';
 
-const props = defineProps<{
-	posts: BlogPost[];
-}>();
-
+const props = defineProps<{ posts: BlogPost[] }>();
 const { renderMarkdown } = useMarkdown();
 
 const stripHtml = (html: string): string => {
 	if (import.meta.client) {
-		// use browser's DOMParser to properly decode HTML entities
 		const doc = new DOMParser().parseFromString(html, 'text/html');
 		return doc.body.textContent || '';
 	}
-
 	return html
 		.replace(/<[^>]*>/g, '')
 		.replace(/&nbsp;/g, ' ')
@@ -46,39 +54,19 @@ const stripHtml = (html: string): string => {
 };
 
 const imageBlobs: string[] = [];
-const displayed = computed(() =>
-	props.posts.map((post: BlogPost, index: number) => {
-		let image: string | (Partial<HTMLImageElement> & { [key: string]: any });
 
+const displayed = computed(() =>
+	props.posts.map((post: BlogPost) => {
+		let imageSrc: string;
 		if (post.thumbnail_url) {
-			image = post.thumbnail_url;
-		} else if (post.thumbnail) {
+			imageSrc = post.thumbnail_url;
+		} else if (post.thumbnail && import.meta.client) {
 			const array = new Uint8Array(post.thumbnail);
 			const blobUrl = URL.createObjectURL(new Blob([array]));
 			imageBlobs.push(blobUrl);
-			image = blobUrl;
+			imageSrc = blobUrl;
 		} else {
-			image = '/favicon.png';
-		}
-
-		if (index < 2 && typeof image === 'string') {
-			image = {
-				src: image,
-				decoding: 'async',
-				loading: 'eager',
-				fetchPriority: 'high',
-				format: 'webp',
-				quality: '85',
-				sizes: 'sm:100vw md:50vw lg:33vw'
-			};
-		} else if (typeof image === 'string') {
-			image = {
-				src: image,
-				loading: 'lazy',
-				format: 'webp',
-				quality: '80',
-				sizes: 'sm:100vw md:50vw lg:33vw'
-			};
+			imageSrc = '/favicon.png';
 		}
 
 		const date = new Date(post.created_at);
@@ -86,7 +74,6 @@ const displayed = computed(() =>
 		const month = date.getUTCMonth() + 1;
 		const day = date.getUTCDate();
 
-		// Render markdown first, then strip HTML for description preview
 		let description = '';
 		if (post.content) {
 			const rendered = renderMarkdown(post.content);
@@ -94,27 +81,21 @@ const displayed = computed(() =>
 			description = plainText.slice(0, 150) + (plainText.length > 150 ? '...' : '');
 		}
 
-		const display = {
+		return {
 			title: post.title,
 			description,
 			date: post.created_at,
 			badge: post.tags?.[0] || 'General',
-			image,
+			imageSrc,
 			to: `/${year}/${month}/${day}/${post.slug}`
 		};
-
-		return display;
 	})
 );
 
 onBeforeUnmount(() => {
 	while (imageBlobs.length) {
 		const blob = imageBlobs.pop();
-		if (blob) {
-			URL.revokeObjectURL(blob);
-		} else {
-			break;
-		}
+		if (blob) URL.revokeObjectURL(blob);
 	}
 });
 </script>
