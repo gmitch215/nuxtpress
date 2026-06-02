@@ -13,7 +13,13 @@ export default defineNuxtConfig({
 				process.env.NUXT_SESSION_PASSWORD ||
 				(process.env.NODE_ENV === 'production'
 					? ''
-					: 'dev_only_session_secret_at_least_32_chars_long_xx')
+					: 'dev_only_session_secret_at_least_32_chars_long_xx'),
+			cookie: {
+				sameSite: 'lax',
+				httpOnly: true,
+				path: '/',
+				secure: process.env.NODE_ENV === 'production'
+			}
 		},
 		analyticsSalt: process.env.NUXT_ANALYTICS_SALT || 'dev_analytics_salt_change_me_please',
 		public: {
