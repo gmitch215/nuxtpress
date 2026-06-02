@@ -68,11 +68,27 @@ After deployment, you'll need to configure your blog through environment variabl
 
 #### Required Settings
 
-| Variable        | Description                   | Default    |
-| --------------- | ----------------------------- | ---------- |
-| `NUXT_PASSWORD` | Admin password for logging in | `password` |
+| Variable                | Description                                       | Required           |
+| ----------------------- | ------------------------------------------------- | ------------------ |
+| `NUXT_SESSION_PASSWORD` | 32+ char secret used to seal session cookies      | **yes** (prod)     |
+| `NUXT_ANALYTICS_SALT`   | Random secret used to derive daily visitor hashes | yes for analytics  |
+| `NUXT_PASSWORD`         | Legacy single-password admin (deprecated)         | **no** since 1.3.0 |
 
-⚠️ **Important**: Change the default password immediately after deployment!
+Generate `NUXT_SESSION_PASSWORD` with: `openssl rand -base64 48`.
+
+#### First-run setup
+
+When you deploy for the first time, NuxtPress detects that no users exist in the database and redirects every visitor to **`/setup`**, an onboarding screen where you create the first administrator account (username, display name, password, optional bio). After that, log in normally with those credentials.
+
+##### Optional: legacy `NUXT_PASSWORD`
+
+`NUXT_PASSWORD` is no longer required. If you do set it:
+
+- On a brand-new install, the migration auto-seeds a user named `admin` (display name **Team**) with that password and you can log in immediately without visiting `/setup`.
+- The admin account's password is **locked** while `NUXT_PASSWORD` is set — you can't change it from the profile or admin user UI. Remove the env var (and redeploy) to manage the password from the app.
+- The legacy `{ password }` (no username) login body is still accepted to log in as `admin` for one release. It will be removed in v1.4.0.
+
+⚠️ If you set `NUXT_PASSWORD`, treat it as a one-time bootstrap helper; the long-term flow is `/setup` + the user-management UI.
 
 #### Optional Settings
 

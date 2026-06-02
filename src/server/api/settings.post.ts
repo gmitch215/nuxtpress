@@ -1,8 +1,8 @@
 import { kv } from 'hub:kv';
-import { ensureLoggedIn } from '../utils';
+import { requireAdmin } from '~/server/utils/auth';
 
 export default defineEventHandler(async (event) => {
-	await ensureLoggedIn(event);
+	await requireAdmin(event);
 
 	const config = useRuntimeConfig();
 

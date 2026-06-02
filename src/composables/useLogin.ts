@@ -1,46 +1,35 @@
 export function useLogin() {
-	const loggedIn = useState<boolean | undefined>('logged_in', () => undefined);
+	const session = useUserSession();
+	const loggedIn = computed(() => session.loggedIn.value);
+	const user = computed(() => session.user.value);
+	const isAdmin = computed(() => user.value?.role === 'administrator');
 
-	const login = async (password: string) => {
+	const login = async (passwordOrCreds: string | { username: string; password: string }) => {
+		const body =
+			typeof passwordOrCreds === 'string'
+				? { username: 'admin', password: passwordOrCreds }
+				: passwordOrCreds;
 		const result = await $fetch<{ ok: boolean }>('/api/login', {
 			method: 'POST',
-			body: { password },
+			body,
 			credentials: 'include'
 		});
-
 		if (result.ok) {
-			loggedIn.value = true;
+			await session.fetch();
 		}
-
 		return result;
 	};
 
 	const isLoggedIn = async () => {
-		if (loggedIn.value !== undefined) {
-			return loggedIn.value;
+		if (!session.ready.value) {
+			await session.fetch();
 		}
-
-		try {
-			const response = await $fetch<{ loggedIn: boolean }>('/api/verify', {
-				credentials: 'include'
-			});
-
-			loggedIn.value = response.loggedIn;
-			return loggedIn.value;
-		} catch (error) {
-			loggedIn.value = false;
-			return false;
-		}
+		return loggedIn.value;
 	};
 
 	const logout = async () => {
-		await $fetch('/api/logout', {
-			method: 'POST',
-			credentials: 'include'
-		});
-
-		loggedIn.value = false;
+		await session.clear();
 	};
 
-	return { login, loggedIn, isLoggedIn, logout };
+	return { login, logout, loggedIn, user, isAdmin, isLoggedIn };
 }

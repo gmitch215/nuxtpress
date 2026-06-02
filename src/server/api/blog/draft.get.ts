@@ -1,7 +1,9 @@
 import { kv } from 'hub:kv';
+import { requireAuthed } from '~/server/utils/auth';
 import { BlogPostData } from '~/shared/types';
 
 export default defineEventHandler(async (event) => {
+	await requireAuthed(event);
 	await ensureDatabase();
 
 	const { slug } = getQuery(event);

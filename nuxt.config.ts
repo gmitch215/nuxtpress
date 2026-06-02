@@ -8,6 +8,14 @@ export default defineNuxtConfig({
 	},
 	runtimeConfig: {
 		password: process.env.NUXT_PASSWORD || 'password',
+		session: {
+			password:
+				process.env.NUXT_SESSION_PASSWORD ||
+				(process.env.NODE_ENV === 'production'
+					? ''
+					: 'dev_only_session_secret_at_least_32_chars_long_xx')
+		},
+		analyticsSalt: process.env.NUXT_ANALYTICS_SALT || 'dev_analytics_salt_change_me_please',
 		public: {
 			site_url: process.env.NUXT_PUBLIC_SITE_URL,
 			name: process.env.NUXT_PUBLIC_NAME || 'NuxtPress',
@@ -48,13 +56,25 @@ export default defineNuxtConfig({
 				'prosemirror-view',
 				'prosemirror-model',
 				'prosemirror-transform',
-				'dompurify'
+				'@tiptap/extension-audio',
+				'@tiptap/extension-emoji',
+				'@tiptap/extension-text-align',
+				'@tiptap/extension-youtube',
+				'@tiptap/core',
+				'highlight.js',
+				'marked',
+				'zod',
+				'@vue/devtools-core',
+				'@vue/devtools-kit',
+				'@unhead/schema-org/vue',
+				'@unovis/vue'
 			]
 		}
 	},
 	hub: {
 		cache: true,
 		kv: true,
+		blob: true,
 		db: 'sqlite'
 	},
 	$production: {
@@ -79,6 +99,7 @@ export default defineNuxtConfig({
 	},
 	modules: [
 		'@nuxthub/core',
+		'nuxt-auth-utils',
 		'@nuxt/ui',
 		'nuxt-viewport',
 		'@nuxtjs/robots',

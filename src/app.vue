@@ -8,15 +8,10 @@
 
 <script setup>
 const config = useRuntimeConfig();
-const { isLoggedIn } = useLogin();
 const { settings, fetchSettings } = useSettings();
 
-// Fetch settings during SSR to prevent flash of config values
+// fetch settings during ssr to prevent flash of config values
 await fetchSettings();
-
-onMounted(async () => {
-	await isLoggedIn();
-});
 
 useSeoMeta({
 	charset: 'utf-8',

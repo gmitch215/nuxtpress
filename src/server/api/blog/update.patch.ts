@@ -1,30 +1,25 @@
 import { eq } from 'drizzle-orm';
 import { kv } from 'hub:kv';
 import { blogPosts } from '~/server/db/schema';
-import { ensureLoggedIn } from '~/server/utils';
+import { requireOwnerOrAdmin } from '~/server/utils/auth';
 import { ensureDatabase } from '~/server/utils/db';
 import { blogPostUpdateSchema } from '~/shared/schemas';
 import { BlogPostData } from '~/shared/types';
 
 export default defineEventHandler(async (event) => {
-	await ensureLoggedIn(event);
 	await ensureDatabase();
 
 	const { post } = await readBody<{ post: BlogPostData & { id: string } }>(event);
 
 	if (!post) {
-		throw createError({
-			statusCode: 400,
-			statusMessage: 'No post object provided'
-		});
+		throw createError({ statusCode: 400, statusMessage: 'No post object provided' });
 	}
 
 	if (!post.id || typeof post.id !== 'string' || post.id.trim() === '') {
-		throw createError({
-			statusCode: 400,
-			statusMessage: 'Invalid post ID provided'
-		});
+		throw createError({ statusCode: 400, statusMessage: 'Invalid post ID provided' });
 	}
+
+	await requireOwnerOrAdmin(event, post.id);
 
 	const validation = blogPostUpdateSchema.safeParse(post);
 	if (!validation.success) {
@@ -35,7 +30,6 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	// get the old post data for cache invalidation
 	const oldPosts = await db
 		.select({ slug: blogPosts.slug, createdAt: blogPosts.createdAt })
 		.from(blogPosts)
@@ -44,7 +38,6 @@ export default defineEventHandler(async (event) => {
 
 	const oldPost = oldPosts[0];
 
-	// Convert Uint8Array to base64 string for storage
 	const thumbnailString = post.thumbnail ? btoa(String.fromCharCode(...post.thumbnail)) : null;
 
 	await db
@@ -60,25 +53,23 @@ export default defineEventHandler(async (event) => {
 		})
 		.where(eq(blogPosts.id, post.id));
 
-	// invalidate caches
 	await kv.del('nuxtpress:blog_posts_list');
 	await kv.del('nuxtpress:blog_posts_list:v1');
+	await kv.del('nuxtpress:blog_posts_list:v2');
 	await kv.del(`nuxtpress:slug_exists:${post.slug}`);
 
 	if (oldPost) {
 		const oldDate = new Date(oldPost.createdAt);
-		const oldCacheKey = `nuxtpress:blog_post:${oldPost.slug}:${oldDate.getUTCFullYear()}:${oldDate.getUTCMonth() + 1}:${oldDate.getUTCDate()}`;
-		const oldCacheKeyV2 = `nuxtpress:blog_post:v2:${oldPost.slug}:${oldDate.getUTCFullYear()}:${oldDate.getUTCMonth() + 1}:${oldDate.getUTCDate()}`;
-		await kv.del(oldCacheKey);
-		await kv.del(oldCacheKeyV2);
+		const y = oldDate.getUTCFullYear();
+		const m = oldDate.getUTCMonth() + 1;
+		const d = oldDate.getUTCDate();
+		for (const v of ['', 'v2:', 'v3:']) {
+			await kv.del(`nuxtpress:blog_post:${v}${oldPost.slug}:${y}:${m}:${d}`);
+			await kv.del(`nuxtpress:blog_post:${v}${post.slug}:${y}:${m}:${d}`);
+		}
 
 		if (oldPost.slug !== post.slug) {
 			await kv.del(`nuxtpress:slug_exists:${oldPost.slug}`);
 		}
-
-		const newCacheKey = `nuxtpress:blog_post:${post.slug}:${oldDate.getUTCFullYear()}:${oldDate.getUTCMonth() + 1}:${oldDate.getUTCDate()}`;
-		const newCacheKeyV2 = `nuxtpress:blog_post:v2:${post.slug}:${oldDate.getUTCFullYear()}:${oldDate.getUTCMonth() + 1}:${oldDate.getUTCDate()}`;
-		await kv.del(newCacheKey);
-		await kv.del(newCacheKeyV2);
 	}
 });

@@ -1,8 +1,8 @@
 <template>
 	<LazyUBanner
-		v-if="insecure"
-		title="Your site does not have a secure password. Please change 'NUXT_PASSWORD' in your configuration to secure your blog."
-		icon="mdi:alert-circle-outline"
+		v-if="legacyWarn"
+		title="NUXT_PASSWORD is set but a custom admin already exists. Remove the env var to fully cut over to the user-managed account."
+		icon="mdi:lock-alert"
 		color="warning"
 		class="justify-center"
 	/>
@@ -14,11 +14,13 @@
 </template>
 
 <script setup lang="ts">
-const insecure = ref(false);
-if (import.meta.server) {
-	const config = useRuntimeConfig();
-	if (!config.password || config.password === 'password') {
-		insecure.value = true;
-	}
-}
+const { status } = useSetupStatus();
+const session = useUserSession();
+
+const legacyWarn = computed(
+	() =>
+		Boolean(status.value?.hasLegacyPassword) &&
+		!status.value?.needsSetup &&
+		session.user.value?.username !== 'admin'
+);
 </script>

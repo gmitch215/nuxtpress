@@ -1,8 +1,10 @@
 import { kv } from 'hub:kv';
+import { requireAuthed } from '~/server/utils/auth';
 import { blogPostCreateSchema } from '~/shared/schemas';
 import { BlogPostData } from '~/shared/types';
 
 export default defineEventHandler(async (event) => {
+	await requireAuthed(event);
 	await ensureDatabase();
 
 	const { post } = await readBody<{

@@ -17,11 +17,24 @@
 		<div class="space-y-4">
 			<div>
 				<UInput
+					id="username"
+					v-model="username"
+					type="text"
+					autocomplete="username"
+					placeholder="Username"
+					class="w-full"
+					:disabled="loading || success"
+					@keypress="handleKeyPress"
+				/>
+			</div>
+			<div>
+				<UInput
 					id="password"
 					v-model="password"
 					type="password"
-					placeholder="Enter admin password"
-					class="w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+					autocomplete="current-password"
+					placeholder="Password"
+					class="w-full"
 					:disabled="loading || success"
 					@keypress="handleKeyPress"
 				/>
@@ -29,7 +42,7 @@
 
 			<UButton
 				icon="mdi:account-lock-open"
-				class="w-full py-2 px-4 font-semibold rounded-md transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
+				class="w-full py-2 px-4 font-semibold"
 				:disabled="loading || success"
 				@click="handleLogin"
 			>
@@ -44,18 +57,17 @@
 <script setup lang="ts">
 const { login } = useLogin();
 
+const username = ref('admin');
 const password = ref('');
 const loading = ref(false);
 const error = ref('');
 const success = ref(false);
 
-const emit = defineEmits<{
-	success: [];
-}>();
+const emit = defineEmits<{ success: [] }>();
 
 const handleLogin = async () => {
-	if (!password.value) {
-		error.value = 'Password is required';
+	if (!username.value || !password.value) {
+		error.value = 'Username and password are required';
 		return;
 	}
 
@@ -63,18 +75,16 @@ const handleLogin = async () => {
 	error.value = '';
 
 	try {
-		const result = await login(password.value);
-
+		const result = await login({ username: username.value.trim(), password: password.value });
 		if (result.ok) {
 			success.value = true;
-			error.value = '';
 			emit('success');
 		} else {
-			error.value = 'Invalid password';
+			error.value = 'Invalid credentials';
 		}
 	} catch (err: any) {
 		if (err.statusCode === 401) {
-			error.value = 'Invalid password';
+			error.value = 'Invalid credentials';
 		} else {
 			error.value = 'An error occurred. Please try again.';
 		}
@@ -84,8 +94,6 @@ const handleLogin = async () => {
 };
 
 const handleKeyPress = (e: KeyboardEvent) => {
-	if (e.key === 'Enter') {
-		handleLogin();
-	}
+	if (e.key === 'Enter') handleLogin();
 };
 </script>

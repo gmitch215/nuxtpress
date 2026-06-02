@@ -42,6 +42,42 @@
 			size="lg"
 			@click="settingsOpen = true"
 		/>
+		<UButton
+			v-if="loggedIn"
+			icon="mdi:chart-line"
+			color="info"
+			variant="outline"
+			size="lg"
+			title="Analytics"
+			@click="analyticsOpen = true"
+		/>
+		<UButton
+			v-if="loggedIn"
+			icon="mdi:account-circle"
+			color="neutral"
+			variant="outline"
+			size="lg"
+			title="Profile"
+			to="/profile"
+		/>
+		<UButton
+			v-if="isAdmin"
+			icon="mdi:account-multiple"
+			color="warning"
+			variant="outline"
+			size="lg"
+			title="Users"
+			to="/admin/users"
+		/>
+		<UButton
+			v-if="loggedIn"
+			icon="mdi:logout"
+			color="neutral"
+			variant="ghost"
+			size="lg"
+			title="Log out"
+			@click="logout"
+		/>
 	</div>
 	<div
 		class="w-full flex flex-col my-4"
@@ -67,12 +103,7 @@
 		title="Admin Login"
 	>
 		<template #body>
-			<LoginForm
-				@success="
-					loginOpen = false;
-					loggedIn = true;
-				"
-			/>
+			<LoginForm @success="loginOpen = false" />
 		</template>
 	</UModal>
 	<UModal
@@ -134,6 +165,16 @@
 		</template>
 	</UModal>
 	<UModal
+		v-if="loggedIn"
+		v-model:open="analyticsOpen"
+		title="Analytics"
+		class="max-w-[90vw] w-full"
+	>
+		<template #body>
+			<LazyAnalyticsDashboard v-if="analyticsOpen" />
+		</template>
+	</UModal>
+	<UModal
 		v-model:open="feedOpen"
 		title="RSS Feed"
 		class="min-w-120"
@@ -174,15 +215,14 @@
 
 <script setup lang="ts">
 const { posts, fetchPosts } = useBlogPosts();
-const { loggedIn, isLoggedIn } = useLogin();
+const { loggedIn, isAdmin, logout } = useLogin();
 const { settings, fetchSettings } = useSettings();
 
 const config = useRuntimeConfig();
+const analyticsOpen = ref(false);
 
-// Check login state during SSR
-await isLoggedIn();
-
-const loginOpen = ref(false);
+const route = useRoute();
+const loginOpen = ref(route.query.login === '1');
 const newPostOpen = ref(false);
 const settingsOpen = ref(false);
 const newPostFullscreen = ref(false);

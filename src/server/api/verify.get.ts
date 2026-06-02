@@ -1,17 +1,16 @@
-import { kv } from 'hub:kv';
-
 export default defineEventHandler(async (event) => {
-	const token = getCookie(event, 'admin');
-	const sessionId = getCookie(event, 'admin_session_id');
-
-	if (!token || !sessionId) {
-		return { loggedIn: false };
-	}
-
-	const storedToken = await kv.get(`nuxtpress:admin_session:${sessionId}`);
-	if (storedToken === token) {
-		return { loggedIn: true };
-	}
-
-	return { loggedIn: false };
+	const session = await getUserSession(event);
+	const user = session.user;
+	return {
+		loggedIn: Boolean(user),
+		user: user
+			? {
+					id: user.id,
+					username: user.username,
+					displayName: user.displayName,
+					role: user.role,
+					avatarPathname: user.avatarPathname ?? null
+				}
+			: null
+	};
 });
