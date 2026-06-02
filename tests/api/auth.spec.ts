@@ -1,7 +1,4 @@
 import { expect, test } from '@playwright/test';
-import { ANON_STATE } from '../utils/auth';
-
-test.use({ storageState: ANON_STATE });
 
 test.describe('auth API', () => {
 	test('GET /api/verify returns loggedIn:false anonymously', async ({ request }) => {

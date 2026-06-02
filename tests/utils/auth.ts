@@ -2,9 +2,6 @@ import type { APIRequestContext, BrowserContext, Page } from '@playwright/test';
 
 export const TEST_ADMIN = { username: 'admin', password: 'adminpass' };
 
-/** empty storageState for tests that must run anonymously */
-export const ANON_STATE = { cookies: [], origins: [] } as const;
-
 export async function loginViaApi(
 	request: APIRequestContext,
 	creds: { username: string; password: string } = TEST_ADMIN
