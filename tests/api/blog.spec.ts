@@ -66,8 +66,14 @@ test.describe('blog API', () => {
 	});
 
 	test('GET /api/blog/find returns 404 for unknown slug', async ({ request }) => {
+		const d = new Date();
 		const res = await request.get('/api/blog/find', {
-			params: { slug: 'definitely-not-here', year: 2099, month: 1, day: 1 }
+			params: {
+				slug: 'definitely-not-here',
+				year: d.getUTCFullYear(),
+				month: d.getUTCMonth() + 1,
+				day: d.getUTCDate()
+			}
 		});
 		expect(res.status()).toBe(404);
 	});

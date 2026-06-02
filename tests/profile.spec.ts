@@ -17,10 +17,7 @@ test.describe('profile page', () => {
 	test('user can update display name', async ({ context, page }) => {
 		await loginContext(context);
 		await page.goto('/profile');
-		const input = page
-			.locator('input')
-			.filter({ hasNot: page.locator('input[type=password]') })
-			.first();
+		const input = page.getByLabel('Display name');
 		await input.waitFor();
 		await input.fill(`Team Updated ${Date.now()}`);
 		await page.getByRole('button', { name: /save changes/i }).click();

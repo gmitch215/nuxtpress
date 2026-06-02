@@ -22,13 +22,13 @@ test.describe('users API', () => {
 
 	test('PATCH /api/users/me updates displayName as admin', async ({ request }) => {
 		await loginViaApi(request);
-		const original = (await (await request.get('/api/verify')).json()).user?.displayName;
+		const before = await (await request.get('/api/users/admin')).json();
+		const original = before.author?.displayName as string | undefined;
 		const next = `Team ${Date.now()}`;
 		const res = await request.patch('/api/users/me', { data: { displayName: next } });
 		expect(res.ok()).toBe(true);
-		const verify = await request.get('/api/verify');
-		expect((await verify.json()).user?.displayName).toBe(next);
-		// restore so downstream tests see a stable name
+		const after = await (await request.get('/api/users/admin')).json();
+		expect(after.author?.displayName).toBe(next);
 		if (original) {
 			await request.patch('/api/users/me', { data: { displayName: original } });
 		}
