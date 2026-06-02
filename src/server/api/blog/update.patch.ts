@@ -56,6 +56,7 @@ export default defineEventHandler(async (event) => {
 	await kv.del('nuxtpress:blog_posts_list');
 	await kv.del('nuxtpress:blog_posts_list:v1');
 	await kv.del('nuxtpress:blog_posts_list:v2');
+	await kv.del('nuxtpress:feed_xml:v2');
 	await kv.del(`nuxtpress:slug_exists:${post.slug}`);
 
 	if (oldPost) {
