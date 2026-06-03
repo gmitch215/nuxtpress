@@ -5,8 +5,19 @@ import { kv } from 'hub:kv';
 let isInitialized = false;
 let initPromise: Promise<void> | null = null;
 
-const CURRENT_MIGRATION_VERSION = 3;
+const CURRENT_MIGRATION_VERSION = 4;
 const MIGRATION_VERSION_KEY = 'nuxtpress:db_migration_version';
+
+export function describeDbError(error: unknown): string {
+	const e = error as any;
+	const cause = e?.cause;
+	const causeMsg = cause?.message || cause?.toString?.();
+	const causeCode = cause?.code || cause?.libsqlError?.code;
+	if (causeMsg && causeMsg !== e?.message) {
+		return causeCode ? `${causeMsg} [${causeCode}]` : causeMsg;
+	}
+	return e?.message ?? String(error);
+}
 
 async function hasBlogPostsTable() {
 	try {
@@ -33,6 +44,15 @@ async function columnExists(table: string, column: string) {
 		return rows.some((row) => row.name === column);
 	} catch {
 		return false;
+	}
+}
+
+async function ensureColumn(table: string, column: string, definition: string) {
+	if (await columnExists(table, column)) return;
+	try {
+		await db.run(sql.raw(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`));
+	} catch (error) {
+		console.warn(`failed to add ${table}.${column}:`, describeDbError(error));
 	}
 }
 
@@ -172,11 +192,18 @@ async function runSchemaMigrations() {
 			updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
 		)
 	`);
+	// repair drift on pre-existing users tables (CREATE TABLE IF NOT EXISTS is a no-op when the table already exists)
+	await ensureColumn('users', 'display_name', 'TEXT');
+	await ensureColumn('users', 'password_hash', 'TEXT');
+	await ensureColumn('users', 'role', 'TEXT');
+	await ensureColumn('users', 'bio', 'TEXT');
+	await ensureColumn('users', 'avatar_pathname', 'TEXT');
+	await ensureColumn('users', 'is_active', 'INTEGER NOT NULL DEFAULT 1');
+	await ensureColumn('users', 'created_at', 'INTEGER');
+	await ensureColumn('users', 'updated_at', 'INTEGER');
 	await db.run(sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)`);
 
-	if (!(await columnExists('blog_posts', 'author_id'))) {
-		await db.run(sql`ALTER TABLE blog_posts ADD COLUMN author_id TEXT`);
-	}
+	await ensureColumn('blog_posts', 'author_id', 'TEXT');
 	await db.run(sql`CREATE INDEX IF NOT EXISTS idx_blog_posts_author ON blog_posts(author_id)`);
 }
 
@@ -195,7 +222,14 @@ export async function ensureDatabase() {
 
 			const blogReady = await hasBlogPostsTable();
 			const usersReady = await hasUsersTable();
-			const needsSchema = cachedVersion !== CURRENT_MIGRATION_VERSION || !blogReady || !usersReady;
+			const hasAvatarColumn = usersReady && (await columnExists('users', 'avatar_pathname'));
+			const hasAuthorColumn = blogReady && (await columnExists('blog_posts', 'author_id'));
+			const needsSchema =
+				cachedVersion !== CURRENT_MIGRATION_VERSION ||
+				!blogReady ||
+				!usersReady ||
+				!hasAvatarColumn ||
+				!hasAuthorColumn;
 
 			if (needsSchema) {
 				console.log('📦 Running database migrations...');
@@ -219,7 +253,7 @@ export async function ensureDatabase() {
 
 			isInitialized = true;
 		} catch (error: any) {
-			console.error('Database migration error:', error);
+			console.error('Database migration error:', describeDbError(error));
 			throw error;
 		}
 	})();
