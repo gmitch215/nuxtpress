@@ -85,26 +85,75 @@ export const userCreateSchema = z.object({
 		.string()
 		.regex(USERNAME_RE, 'Username must be 3-32 lowercase letters, numbers, hyphens, or underscores')
 		.transform((v) => v.toLowerCase()),
-	displayName: z.string().min(1, 'Display name is required').max(50),
-	password: z.string().min(8, 'Password must be at least 8 characters').max(128),
+	displayName: z
+		.string()
+		.min(1, 'Display name is required')
+		.max(50, 'Display name must be 50 characters or less'),
+	password: z
+		.string()
+		.min(8, 'Password must be at least 8 characters')
+		.max(128, 'Password must be 128 characters or less'),
 	role: z.enum(['administrator', 'author']),
-	bio: z.string().max(500).optional()
+	bio: z.string().max(500, 'Bio must be 500 characters or less').optional()
 });
 
 export const userUpdateSchema = z.object({
-	displayName: z.string().min(1).max(50).optional(),
+	displayName: z
+		.string()
+		.min(1, 'Display name is required')
+		.max(50, 'Display name must be 50 characters or less')
+		.optional(),
 	role: z.enum(['administrator', 'author']).optional(),
-	bio: z.string().max(500).optional().or(z.literal('')),
-	password: z.string().min(8).max(128).optional(),
+	bio: z.string().max(500, 'Bio must be 500 characters or less').optional().or(z.literal('')),
+	password: z
+		.string()
+		.min(8, 'Password must be at least 8 characters')
+		.max(128, 'Password must be 128 characters or less')
+		.optional(),
 	isActive: z.boolean().optional()
 });
 
 export const profileUpdateSchema = z.object({
-	displayName: z.string().min(1).max(50).optional(),
-	bio: z.string().max(500).optional().or(z.literal('')),
-	currentPassword: z.string().min(1).optional(),
-	newPassword: z.string().min(8).max(128).optional()
+	displayName: z
+		.string()
+		.min(1, 'Display name is required')
+		.max(50, 'Display name must be 50 characters or less')
+		.optional(),
+	bio: z.string().max(500, 'Bio must be 500 characters or less').optional().or(z.literal('')),
+	currentPassword: z.string().min(1, 'Current password is required').optional(),
+	newPassword: z
+		.string()
+		.min(8, 'Password must be at least 8 characters')
+		.max(128, 'Password must be 128 characters or less')
+		.optional()
 });
+
+const FIELD_LABELS: Record<string, string> = {
+	username: 'Username',
+	displayName: 'Display name',
+	password: 'Password',
+	newPassword: 'New password',
+	currentPassword: 'Current password',
+	bio: 'Bio',
+	role: 'Role',
+	title: 'Title',
+	slug: 'Slug',
+	content: 'Content',
+	thumbnail_url: 'Thumbnail URL',
+	tags: 'Tags'
+};
+
+export function firstZodIssueMessage(
+	issues: { path: PropertyKey[]; message?: string }[] | undefined,
+	fallback: string
+): string {
+	if (!issues || issues.length === 0) return fallback;
+	const issue = issues[0]!;
+	const pathKey = issue.path?.[0]?.toString();
+	const label = pathKey ? (FIELD_LABELS[pathKey] ?? pathKey) : '';
+	const message = issue.message && issue.message !== 'Invalid input' ? issue.message : fallback;
+	return label ? `${label}: ${message}` : message;
+}
 
 export type BlogPostInput = z.infer<typeof blogPostSchema>;
 export type BlogPostCreateInput = z.infer<typeof blogPostCreateSchema>;
