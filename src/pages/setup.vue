@@ -75,12 +75,14 @@
 				/>
 			</UFormField>
 
-			<div
+			<UAlert
 				v-if="error"
-				class="text-sm text-red-500"
-			>
-				{{ error }}
-			</div>
+				color="error"
+				variant="subtle"
+				icon="mdi:alert-circle"
+				:title="error"
+				:description="errorDetails || undefined"
+			/>
 
 			<UButton
 				type="submit"
@@ -97,6 +99,8 @@
 </template>
 
 <script setup lang="ts">
+import { firstZodIssueMessage } from '~/shared/schemas';
+
 definePageMeta({ middleware: [] });
 const { status, refresh } = useSetupStatus();
 await refresh();
@@ -109,13 +113,29 @@ const bio = ref('');
 
 const submitting = ref(false);
 const error = ref('');
+const errorDetails = ref('');
 
 const session = useUserSession();
+const toast = useToast();
 
 async function onSubmit() {
 	error.value = '';
+	errorDetails.value = '';
+
+	if (username.value.trim().length < 3) {
+		error.value = 'Username must be at least 3 characters';
+		return;
+	}
+	if (!displayName.value.trim()) {
+		error.value = 'Display name is required';
+		return;
+	}
 	if (password.value.length < 8) {
 		error.value = 'Password must be at least 8 characters';
+		return;
+	}
+	if (password.value.length > 128) {
+		error.value = 'Password must be 128 characters or less';
 		return;
 	}
 	if (password.value !== confirm.value) {
@@ -135,11 +155,28 @@ async function onSubmit() {
 			},
 			credentials: 'include'
 		});
+		toast.add({
+			title: 'Welcome aboard',
+			description: 'Administrator account created. Time to write your first post.',
+			icon: 'mdi:rocket-launch',
+			color: 'success'
+		});
 		await refresh();
 		await session.fetch();
 		await navigateTo('/');
 	} catch (e: any) {
-		error.value = e?.data?.statusMessage || e?.statusMessage || 'Setup failed';
+		const issues = e?.data?.issues as { path: PropertyKey[]; message?: string }[] | undefined;
+		const primary = issues
+			? firstZodIssueMessage(issues, e?.data?.statusMessage || 'Setup failed')
+			: e?.data?.statusMessage || e?.statusMessage || e?.message || 'Setup failed';
+		error.value = primary;
+		if (issues && issues.length > 1) {
+			errorDetails.value = issues
+				.slice(1)
+				.map((i) => firstZodIssueMessage([i], i.message ?? ''))
+				.filter(Boolean)
+				.join(' · ');
+		}
 	} finally {
 		submitting.value = false;
 	}
