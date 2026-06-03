@@ -46,8 +46,8 @@ jobs:
       - name: Prepare Nuxt
         run: bunx nuxi prepare
 
-      - name: Run Playwright Tests
-        run: bunx playwright test
+      - name: Run Playwright Tests with coverage
+        run: bun run test:coverage
         env:
           CI: '1'
 
@@ -56,7 +56,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report
-          path: playwright-report/
+          path: |
+            playwright-report/
+            coverage/
           retention-days: 14
 
       - name: Upload Coverage to Codecov
@@ -64,4 +66,5 @@ jobs:
         uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
           fail_ci_if_error: false
