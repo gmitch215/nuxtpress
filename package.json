@@ -7,13 +7,13 @@
     "dev": "bunx nuxi dev --no-restart --public --port 8787",
     "dev:test": "bunx nuxi dev --no-restart --public --port 8787 --dotenv .config/test.env",
     "dev:cloudflare": "bun run build && wrangler dev --local --port 8787",
-    "build": "nuxt build",
+    "build": "NODE_OPTIONS='--max-old-space-size=4096' nuxt build",
     "postinstall": "nuxt prepare",
     "prettier": "bunx prettier --write .",
     "prettier:check": "bunx prettier --check .",
-    "test": "bunx playwright test",
-    "test:headed": "bunx playwright test --headed",
-    "test:report": "bunx playwright show-report",
+    "test": "NODE_OPTIONS='--max-old-space-size=4096' bunx playwright test",
+    "test:headed": "NODE_OPTIONS='--max-old-space-size=4096' bunx playwright test --headed",
+    "test:report": "NODE_OPTIONS='--max-old-space-size=4096' bunx playwright show-report",
     "prepare": "husky install"
   },
   "peerDependencies": {

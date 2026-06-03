@@ -59,7 +59,7 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
-      - name: Upload coverage to Codecov
+      - name: Upload Coverage to Codecov
         if: always()
         uses: codecov/codecov-action@v6
         with:
