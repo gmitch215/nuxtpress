@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from 'hub:db';
 import { users } from '~/server/db/schema';
 import { requireAdmin } from '~/server/utils/auth';
@@ -35,15 +35,12 @@ export default defineEventHandler(async (event) => {
 
 	const id = crypto.randomUUID().replace(/-/g, '');
 	const hash = await hashPassword(parsed.data.password);
-	await db.insert(users).values({
-		id,
-		username,
-		displayName: parsed.data.displayName,
-		passwordHash: hash,
-		role: parsed.data.role,
-		bio: parsed.data.bio || null,
-		isActive: true
-	});
+	const bio = parsed.data.bio || null;
+	const now = Date.now();
+	await db.run(sql`
+		INSERT INTO users (id, username, display_name, password_hash, role, bio, avatar_pathname, is_active, created_at, updated_at)
+		VALUES (${id}, ${username}, ${parsed.data.displayName}, ${hash}, ${parsed.data.role}, ${bio}, ${null}, ${1}, ${now}, ${now})
+	`);
 
 	return { id };
 });

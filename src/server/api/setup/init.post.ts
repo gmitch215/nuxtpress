@@ -1,5 +1,5 @@
+import { sql } from 'drizzle-orm';
 import { db } from 'hub:db';
-import { users } from '~/server/db/schema';
 import { ensureDatabase, userCount } from '~/server/utils/db';
 import { RESERVED_USERNAMES, userCreateSchema } from '~/shared/schemas';
 
@@ -28,27 +28,28 @@ export default defineEventHandler(async (event) => {
 
 	const id = crypto.randomUUID().replace(/-/g, '');
 	const hash = await hashPassword(parsed.data.password);
-	await db.insert(users).values({
-		id,
-		username,
-		displayName: parsed.data.displayName,
-		passwordHash: hash,
-		role: 'administrator',
-		bio: parsed.data.bio || null,
-		isActive: true
-	});
+	const bio = parsed.data.bio || null;
+	const now = Date.now();
+	await db.run(sql`
+		INSERT INTO users (id, username, display_name, password_hash, role, bio, avatar_pathname, is_active, created_at, updated_at)
+		VALUES (${id}, ${username}, ${parsed.data.displayName}, ${hash}, ${'administrator'}, ${bio}, ${null}, ${1}, ${now}, ${now})
+	`);
 
-	await setUserSession(event, {
-		user: {
-			id,
-			username,
-			displayName: parsed.data.displayName,
-			role: 'administrator',
-			avatarPathname: null,
-			bio: parsed.data.bio || null
-		},
-		loggedInAt: Date.now()
-	});
+	try {
+		await setUserSession(event, {
+			user: {
+				id,
+				username,
+				displayName: parsed.data.displayName,
+				role: 'administrator',
+				avatarPathname: null,
+				bio
+			},
+			loggedInAt: now
+		});
+	} catch (error) {
+		console.warn('setup auto-login skipped:', error);
+	}
 
 	return { ok: true, id };
 });
