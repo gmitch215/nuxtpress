@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "nuxtpress",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "type": "module",
   "scripts": {
     "dev": "bunx nuxi dev --no-restart --public --port 8787",
@@ -13,6 +13,7 @@
     "prettier:check": "bunx prettier --check .",
     "test": "NODE_OPTIONS='--max-old-space-size=4096' bunx playwright test",
     "test:headed": "NODE_OPTIONS='--max-old-space-size=4096' bunx playwright test --headed",
+    "test:coverage": "COVERAGE=1 NODE_OPTIONS='--max-old-space-size=4096' bunx playwright test",
     "test:report": "NODE_OPTIONS='--max-old-space-size=4096' bunx playwright show-report",
     "prepare": "husky install"
   },
@@ -61,6 +62,7 @@
     "husky": "^9.1.7",
     "lightningcss": "^1.32.0",
     "lint-staged": "^17.0.0",
+    "monocart-reporter": "^2.11.2",
     "prettier": "^3.8.1",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.8.0",
