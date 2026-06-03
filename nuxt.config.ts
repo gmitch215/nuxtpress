@@ -134,6 +134,14 @@ export default defineNuxtConfig({
 					size: '48px'
 				}
 			}
+		],
+		[
+			'@codecov/nuxt-plugin',
+			{
+				enableBundleAnalysis: process.env.CODECOV_TOKEN !== undefined,
+				bundleName: 'nuxtpress',
+				uploadToken: process.env.CODECOV_TOKEN
+			}
 		]
 	],
 	image: {

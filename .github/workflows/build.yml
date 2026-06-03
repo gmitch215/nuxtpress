@@ -22,6 +22,8 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Build Project
         run: bun run build
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       # uncomment the following lines to enable deployment to Cloudflare Workers
       # - name: Deploy to Cloudflare Workers
       #   uses: cloudflare/wrangler-action@v3
