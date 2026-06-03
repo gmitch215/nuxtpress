@@ -47,6 +47,7 @@ watch(
 
 const src = computed(() => {
 	if (!props.pathname) return null;
+	if (/^(https?:)?\//.test(props.pathname)) return props.pathname;
 	return `/avatars/${encodeURIComponent(props.pathname)}`;
 });
 

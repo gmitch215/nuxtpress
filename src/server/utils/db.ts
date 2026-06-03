@@ -41,24 +41,49 @@ async function legacyAdminSeed() {
 	const password = config.password;
 	if (!password || password === 'password') return;
 
-	const userCount = await db.run(sql`SELECT COUNT(*) as count FROM users`);
-	const count = Number((userCount.rows?.[0] as any)?.count ?? 0);
-	if (count > 0) return;
+	const avatarPath = '/favicon.png';
 
-	const id = crypto.randomUUID().replace(/-/g, '');
-	const hash = await hashPassword(password);
-	const now = Date.now();
-	await db.run(sql`
-		INSERT INTO users (id, username, display_name, password_hash, role, is_active, created_at, updated_at)
-		VALUES (${id}, ${'admin'}, ${'Team'}, ${hash}, ${'administrator'}, ${1}, ${now}, ${now})
-	`);
-	const reassigned = await db.run(
-		sql`UPDATE blog_posts SET author_id = ${id} WHERE author_id IS NULL OR author_id = ''`
-	);
-	const reassignedCount = (reassigned as any)?.meta?.changes ?? (reassigned as any)?.changes ?? '?';
-	console.log(
-		`✓ Seeded admin user from NUXT_PASSWORD and backfilled ${reassignedCount} existing post(s) to Team`
-	);
+	try {
+		const existing = await db.run(
+			sql`SELECT id, avatar_pathname FROM users WHERE username = ${'admin'} LIMIT 1`
+		);
+		const existingRow = existing.rows?.[0] as any;
+		const existingId = existingRow?.id as string | undefined;
+		if (existingId) {
+			if (!existingRow.avatar_pathname) {
+				await db.run(
+					sql`UPDATE users SET avatar_pathname = ${avatarPath} WHERE id = ${existingId}`
+				);
+			}
+			await db.run(
+				sql`UPDATE blog_posts SET author_id = ${existingId} WHERE author_id IS NULL OR author_id = ''`
+			);
+			return;
+		}
+
+		const id = crypto.randomUUID().replace(/-/g, '');
+		const hash = await hashPassword(password);
+		const now = Date.now();
+		await db.run(sql`
+			INSERT OR IGNORE INTO users (id, username, display_name, password_hash, role, avatar_pathname, is_active, created_at, updated_at)
+			VALUES (${id}, ${'admin'}, ${'Team'}, ${hash}, ${'administrator'}, ${avatarPath}, ${1}, ${now}, ${now})
+		`);
+
+		const seeded = await db.run(sql`SELECT id FROM users WHERE username = ${'admin'} LIMIT 1`);
+		const seededId = (seeded.rows?.[0] as any)?.id as string | undefined;
+		if (!seededId) return;
+
+		const reassigned = await db.run(
+			sql`UPDATE blog_posts SET author_id = ${seededId} WHERE author_id IS NULL OR author_id = ''`
+		);
+		const reassignedCount =
+			(reassigned as any)?.meta?.changes ?? (reassigned as any)?.changes ?? '?';
+		console.log(
+			`✓ Seeded admin user from NUXT_PASSWORD and backfilled ${reassignedCount} existing post(s) to Team`
+		);
+	} catch (error) {
+		console.warn('legacy admin seed skipped:', error);
+	}
 }
 
 async function runSchemaMigrations() {
