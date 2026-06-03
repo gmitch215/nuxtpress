@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../fixtures';
 
 test.describe('setup API', () => {
 	test('GET /api/setup/status reports admin already exists', async ({ request }) => {

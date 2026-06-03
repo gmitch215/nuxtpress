@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../fixtures';
 
 test.describe('static and meta routes', () => {
 	test('/sitemap.xml renders', async ({ request }) => {

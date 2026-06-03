@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../fixtures';
 
 test.describe('auth API', () => {
 	test('GET /api/verify returns loggedIn:false anonymously', async ({ request }) => {
