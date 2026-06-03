@@ -83,10 +83,14 @@ const handleLogin = async () => {
 			error.value = 'Invalid credentials';
 		}
 	} catch (err: any) {
-		if (err.statusCode === 401) {
+		const status = err?.statusCode;
+		if (status === 401) {
 			error.value = 'Invalid credentials';
+		} else if (status === 400) {
+			error.value = err?.data?.statusMessage || err?.statusMessage || 'Missing credentials';
 		} else {
-			error.value = 'An error occurred. Please try again.';
+			error.value =
+				err?.data?.statusMessage || err?.statusMessage || 'An error occurred. Please try again.';
 		}
 	} finally {
 		loading.value = false;

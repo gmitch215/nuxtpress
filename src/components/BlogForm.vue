@@ -344,7 +344,11 @@ const handleSubmit = async (event: FormSubmitEvent<BlogPostInput>) => {
 
 		emit('submit', { ...event.data, id: props.initialData?.id });
 	} catch (err: any) {
-		error.value = err.message || 'An error occurred while saving the post';
+		error.value =
+			err?.data?.statusMessage ||
+			err?.statusMessage ||
+			err?.message ||
+			'An error occurred while saving the post';
 	} finally {
 		loading.value = false;
 	}
