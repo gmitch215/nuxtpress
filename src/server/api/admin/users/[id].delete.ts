@@ -21,6 +21,16 @@ export default defineEventHandler(async (event) => {
 	const target = rows[0];
 	if (!target) throw createError({ statusCode: 404, statusMessage: 'User not found' });
 
+	const legacyPassword = useRuntimeConfig().password;
+	const legacyActive = Boolean(legacyPassword) && legacyPassword !== 'password';
+	if (legacyActive && target.username === 'admin') {
+		throw createError({
+			statusCode: 400,
+			statusMessage:
+				'Cannot delete the legacy admin while NUXT_PASSWORD is set — remove the env var and redeploy first'
+		});
+	}
+
 	if (target.role === 'administrator' && (await adminCount()) <= 1) {
 		throw createError({
 			statusCode: 400,
