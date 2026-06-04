@@ -18,14 +18,21 @@ export async function markSetupCompleted() {
 }
 
 export function describeDbError(error: unknown): string {
-	const e = error as any;
-	const cause = e?.cause;
-	const causeMsg = cause?.message || cause?.toString?.();
-	const causeCode = cause?.code || cause?.libsqlError?.code;
-	if (causeMsg && causeMsg !== e?.message) {
-		return causeCode ? `${causeMsg} [${causeCode}]` : causeMsg;
+	// drizzle wraps libsql wraps the actual D1 reason; walk the chain so we surface the real cause
+	const seen = new Set<unknown>();
+	let current: any = error;
+	let best: { msg: string; code?: string } | null = null;
+	while (current && !seen.has(current)) {
+		seen.add(current);
+		const msg = current?.message || (typeof current === 'string' ? current : undefined);
+		const code = current?.code || current?.libsqlError?.code;
+		if (msg && (!best || msg.length < best.msg.length || code)) {
+			best = { msg, code };
+		}
+		current = current?.cause;
 	}
-	return e?.message ?? String(error);
+	if (best) return best.code ? `${best.msg} [${best.code}]` : best.msg;
+	return String(error);
 }
 
 async function hasBlogPostsTable() {
