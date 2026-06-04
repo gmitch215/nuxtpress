@@ -70,14 +70,48 @@ test.describe('admin users API', () => {
 		expect(res.status()).toBe(400);
 	});
 
-	test('PATCH against admin password is blocked while NUXT_PASSWORD set', async ({ request }) => {
+	test('admin password can be updated even while NUXT_PASSWORD is set', async ({ request }) => {
 		await loginViaApi(request);
 		const list = await (await request.get('/api/admin/users')).json();
 		const adminUser = list.find((u: any) => u.username === 'admin');
 		const res = await request.patch(`/api/admin/users/${adminUser.id}`, {
-			data: { password: 'replaced-via-admin-api' }
+			data: { password: 'replaced-via-admin-api-pw' }
 		});
+		expect(res.ok()).toBe(true);
+		// legacy NUXT_PASSWORD still works as a login fallback, so the seeded password remains valid
+		await loginViaApi(request);
+	});
+
+	test('cannot delete the legacy admin while NUXT_PASSWORD is set', async ({ request }) => {
+		// create a second admin so we can attempt to delete the seeded one without tripping the
+		// "cannot delete yourself" guard
+		await loginViaApi(request);
+		const secondUsername = `legacy${Date.now()}`;
+		const secondPassword = 'legacy-admin-pw-12345';
+		const create = await request.post('/api/admin/users', {
+			data: {
+				username: secondUsername,
+				displayName: 'Second admin',
+				password: secondPassword,
+				role: 'administrator'
+			}
+		});
+		if (!create.ok()) test.skip(true, `could not create second admin: ${await create.text()}`);
+		const { id: secondId } = await create.json();
+
+		// re-login as the second admin, then attempt to delete the legacy admin
+		const secondCtx = await request.post('/api/login', {
+			data: { username: secondUsername, password: secondPassword }
+		});
+		expect(secondCtx.ok()).toBe(true);
+		const list = await (await request.get('/api/admin/users')).json();
+		const adminUser = list.find((u: any) => u.username === 'admin');
+		const res = await request.delete(`/api/admin/users/${adminUser.id}`);
 		expect(res.status()).toBe(400);
-		expect((await res.json()).statusMessage).toMatch(/NUXT_PASSWORD/i);
+		expect((await res.json()).statusMessage).toMatch(/NUXT_PASSWORD|legacy/i);
+
+		// cleanup
+		await request.post('/api/login', { data: { username: 'admin', password: 'adminpass' } });
+		await request.delete(`/api/admin/users/${secondId}`);
 	});
 });

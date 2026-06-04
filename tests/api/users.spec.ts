@@ -34,18 +34,23 @@ test.describe('users API', () => {
 		}
 	});
 
-	test('PATCH /api/users/me refuses password change for admin while NUXT_PASSWORD set', async ({
+	test('PATCH /api/users/me can change admin password even while NUXT_PASSWORD is set', async ({
 		request
 	}) => {
 		await loginViaApi(request);
+		const newPw = 'something-new-and-strong-pw';
 		const res = await request.patch('/api/users/me', {
 			data: {
 				currentPassword: 'adminpass',
-				newPassword: 'something-new-and-strong'
+				newPassword: newPw
 			}
 		});
-		expect(res.status()).toBe(400);
-		const msg = (await res.json()).statusMessage as string;
-		expect(msg).toMatch(/NUXT_PASSWORD/i);
+		expect(res.ok()).toBe(true);
+		// the env-var fallback still works as a legacy backdoor, so the original creds keep logging in
+		await loginViaApi(request);
+		// restore the hash to the env value so later tests that PATCH via "adminpass" still verify
+		await request.patch('/api/users/me', {
+			data: { currentPassword: newPw, newPassword: 'adminpass' }
+		});
 	});
 });
