@@ -13,7 +13,8 @@ export function useSetupStatus() {
 				credentials: 'include'
 			});
 		} catch {
-			status.value = null;
+			// keep any previously-known status — null-ing it would cause the setup middleware
+			// to re-fetch in a tight loop or worse, treat "unknown" as "needs setup"
 		}
 		return status.value;
 	};
