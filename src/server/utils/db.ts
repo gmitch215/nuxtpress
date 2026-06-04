@@ -56,8 +56,11 @@ async function hasUsersTable() {
 async function columnExists(table: string, column: string) {
 	try {
 		const result = await db.run(sql.raw(`PRAGMA table_info(${table})`));
-		const rows = result.rows as Array<{ name: string }>;
-		return rows.some((row) => row.name === column);
+		const rows = (result.rows ?? []) as any[];
+		// libsql / D1 return PRAGMA rows as either {name: ...} objects OR positional arrays [cid, name, ...]
+		return rows.some((row) =>
+			Array.isArray(row) ? row[1] === column : row?.name === column || row?.[1] === column
+		);
 	} catch {
 		return false;
 	}
@@ -68,7 +71,10 @@ async function ensureColumn(table: string, column: string, definition: string) {
 	try {
 		await db.run(sql.raw(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`));
 	} catch (error) {
-		console.warn(`failed to add ${table}.${column}:`, describeDbError(error));
+		const reason = describeDbError(error);
+		// idempotent: ALTER fails this way when the column already exists, which is the happy path
+		if (/duplicate column/i.test(reason)) return;
+		console.warn(`failed to add ${table}.${column}:`, reason);
 	}
 }
 
