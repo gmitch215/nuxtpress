@@ -7,6 +7,15 @@ let initPromise: Promise<void> | null = null;
 
 const CURRENT_MIGRATION_VERSION = 4;
 const MIGRATION_VERSION_KEY = 'nuxtpress:db_migration_version';
+export const SETUP_COMPLETED_KV_KEY = 'nuxtpress:setup_completed';
+
+export async function markSetupCompleted() {
+	try {
+		await kv.set(SETUP_COMPLETED_KV_KEY, '1');
+	} catch (error) {
+		console.warn('failed to set setup completion flag:', error);
+	}
+}
 
 export function describeDbError(error: unknown): string {
 	const e = error as any;
@@ -78,6 +87,7 @@ async function legacyAdminSeed() {
 			await db.run(
 				sql`UPDATE blog_posts SET author_id = ${existingId} WHERE author_id IS NULL OR author_id = ''`
 			);
+			await markSetupCompleted();
 			return;
 		}
 
@@ -98,6 +108,7 @@ async function legacyAdminSeed() {
 		);
 		const reassignedCount =
 			(reassigned as any)?.meta?.changes ?? (reassigned as any)?.changes ?? '?';
+		await markSetupCompleted();
 		console.log(
 			`✓ Seeded admin user from NUXT_PASSWORD and backfilled ${reassignedCount} existing post(s) to Team`
 		);

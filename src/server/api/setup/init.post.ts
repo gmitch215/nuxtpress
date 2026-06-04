@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { db } from 'hub:db';
-import { describeDbError, ensureDatabase, userCount } from '~/server/utils/db';
+import { describeDbError, ensureDatabase, markSetupCompleted, userCount } from '~/server/utils/db';
 import { firstZodIssueMessage, RESERVED_USERNAMES, userCreateSchema } from '~/shared/schemas';
 
 export default defineEventHandler(async (event) => {
@@ -50,6 +50,9 @@ export default defineEventHandler(async (event) => {
 	await db.run(
 		sql`UPDATE blog_posts SET author_id = ${id} WHERE author_id IS NULL OR author_id = ''`
 	);
+
+	// short-circuits the D1 read-replica window on subsequent /api/setup/status calls
+	await markSetupCompleted();
 
 	try {
 		await setUserSession(event, {
