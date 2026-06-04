@@ -161,8 +161,18 @@ async function onSubmit() {
 			icon: 'mdi:rocket-launch',
 			color: 'success'
 		});
-		await refresh();
-		await session.fetch();
+		// optimistic — D1 replica reads can lag the just-inserted row by a few seconds,
+		// so we set status locally instead of waiting for /api/setup/status to catch up
+		status.value = {
+			needsSetup: false,
+			hasLegacyPassword: status.value?.hasLegacyPassword ?? false,
+			userCount: Math.max(1, status.value?.userCount ?? 0) + 1
+		};
+		try {
+			await session.fetch();
+		} catch (e) {
+			console.warn('post-setup session fetch failed:', e);
+		}
 		await navigateTo('/');
 	} catch (e: any) {
 		const issues = e?.data?.issues as { path: PropertyKey[]; message?: string }[] | undefined;
