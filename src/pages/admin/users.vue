@@ -7,7 +7,7 @@
 				color="primary"
 				@click="openCreate"
 			>
-				New user
+				New User
 			</UButton>
 		</div>
 
