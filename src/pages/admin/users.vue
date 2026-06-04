@@ -92,8 +92,8 @@
 					@submit.prevent="submit"
 				>
 					<UFormField
-						v-if="!editing"
 						label="Username"
+						hint="3-32 chars, lowercase letters, numbers, hyphens, underscores"
 					>
 						<UInput
 							v-model="form.username"
@@ -287,6 +287,10 @@ async function submit() {
 				bio: form.bio,
 				isActive: form.isActive
 			};
+			const nextUsername = form.username.toLowerCase().trim();
+			if (nextUsername && nextUsername !== editing.value.username) {
+				body.username = nextUsername;
+			}
 			if (form.password) body.password = form.password;
 			await $fetch(`/api/admin/users/${editing.value.id}`, {
 				method: 'PATCH',

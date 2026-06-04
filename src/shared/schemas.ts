@@ -98,6 +98,11 @@ export const userCreateSchema = z.object({
 });
 
 export const userUpdateSchema = z.object({
+	username: z
+		.string()
+		.regex(USERNAME_RE, 'Username must be 3-32 lowercase letters, numbers, hyphens, or underscores')
+		.transform((v) => v.toLowerCase())
+		.optional(),
 	displayName: z
 		.string()
 		.min(1, 'Display name is required')
