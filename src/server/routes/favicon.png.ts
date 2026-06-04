@@ -9,11 +9,13 @@ export default defineEventHandler(async (event) => {
 		if (matches) {
 			const mimeType = matches[1]!;
 			const base64Data = matches[2]!;
-			const buffer = Buffer.from(base64Data, 'base64');
+			const binary = atob(base64Data);
+			const bytes = new Uint8Array(binary.length);
+			for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
 
 			setHeader(event, 'Content-Type', mimeType);
 			setHeader(event, 'Cache-Control', 'public, max-age=31536000, immutable');
-			return buffer;
+			return bytes;
 		}
 	}
 
