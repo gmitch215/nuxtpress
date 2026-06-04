@@ -37,9 +37,5 @@ export default defineNitroPlugin(() => {
 			avatarPathname: fresh.avatarPathname,
 			bio: fresh.bio
 		};
-
-		const cfg = useRuntimeConfig();
-		const legacy = cfg.password && cfg.password !== 'password';
-		session.legacyPasswordActive = Boolean(legacy && fresh.username === 'admin');
 	});
 });

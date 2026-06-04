@@ -115,21 +115,12 @@
 							class="w-full"
 						/>
 					</UFormField>
-					<UAlert
-						v-if="passwordLocked"
-						color="warning"
-						variant="subtle"
-						icon="mdi:lock-alert"
-						title="Password locked by NUXT_PASSWORD"
-						description="Remove the NUXT_PASSWORD environment variable and redeploy to manage this account's password from here."
-					/>
 					<UFormField :label="editing ? 'New password (optional)' : 'Password'">
 						<UInput
 							v-model="form.password"
 							type="password"
 							autocomplete="new-password"
 							class="w-full"
-							:disabled="passwordLocked"
 						/>
 					</UFormField>
 					<UFormField
@@ -214,8 +205,6 @@ definePageMeta({ middleware: 'admin' });
 
 const { user: me } = useLogin();
 const toast = useToast();
-const { status: setupStatus, refresh: refreshSetup } = useSetupStatus();
-await refreshSetup();
 
 const { data, pending, refresh } = await useFetch<AdminUser[]>('/api/admin/users', {
 	credentials: 'include',
@@ -231,12 +220,6 @@ const roleOptions = [
 
 const formOpen = ref(false);
 const editing = ref<AdminUser | null>(null);
-const passwordLocked = computed(
-	() =>
-		Boolean(setupStatus.value?.hasLegacyPassword) &&
-		!!editing.value &&
-		editing.value.username === 'admin'
-);
 const form = reactive({
 	username: '',
 	displayName: '',

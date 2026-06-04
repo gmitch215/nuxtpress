@@ -24,15 +24,6 @@ export default defineEventHandler(async (event) => {
 	if (parsed.data.bio !== undefined) updates.bio = parsed.data.bio || null;
 
 	if (parsed.data.newPassword) {
-		const cfg = useRuntimeConfig();
-		const legacy = cfg.password && cfg.password !== 'password';
-		if (legacy && me.username === 'admin') {
-			throw createError({
-				statusCode: 400,
-				statusMessage:
-					'NUXT_PASSWORD is currently set — remove it from your environment before changing this account password'
-			});
-		}
 		if (!parsed.data.currentPassword) {
 			throw createError({ statusCode: 400, statusMessage: 'Current password is required' });
 		}

@@ -12,16 +12,6 @@
 			</p>
 		</div>
 
-		<UAlert
-			v-if="status?.hasLegacyPassword"
-			color="info"
-			variant="subtle"
-			icon="mdi:information"
-			title="NUXT_PASSWORD detected"
-			description="Your environment has NUXT_PASSWORD set, which would normally auto-seed an admin user — but no users exist yet, so you can choose your own credentials below. The env-var fallback will still work to log in as `admin` for one release."
-			class="mb-6"
-		/>
-
 		<form
 			class="space-y-4"
 			@submit.prevent="onSubmit"

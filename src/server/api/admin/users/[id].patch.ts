@@ -63,15 +63,6 @@ export default defineEventHandler(async (event) => {
 	if (parsed.data.bio !== undefined) updates.bio = parsed.data.bio || null;
 	if (parsed.data.isActive !== undefined) updates.isActive = parsed.data.isActive;
 	if (parsed.data.password) {
-		const cfg = useRuntimeConfig();
-		const legacy = cfg.password && cfg.password !== 'password';
-		if (legacy && target.username === 'admin') {
-			throw createError({
-				statusCode: 400,
-				statusMessage:
-					'NUXT_PASSWORD is currently set — remove it from your environment before changing the admin account password'
-			});
-		}
 		updates.passwordHash = await hashPassword(parsed.data.password);
 	}
 

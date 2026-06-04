@@ -62,19 +62,7 @@
 			/>
 		</UFormField>
 
-		<UAlert
-			v-if="legacyLocked"
-			color="warning"
-			variant="subtle"
-			icon="mdi:lock-alert"
-			title="Password Change is Locked"
-			description="The NUXT_PASSWORD environment variable is currently set, so the admin/Team account's password is controlled by it. Remove NUXT_PASSWORD from your environment (and redeploy) before changing this account's password here."
-		/>
-
-		<details
-			class="rounded border border-default p-3"
-			:class="{ 'opacity-60 pointer-events-none': legacyLocked }"
-		>
+		<details class="rounded border border-default p-3">
 			<summary class="cursor-pointer text-sm font-medium">Change password</summary>
 			<div class="mt-3 space-y-3">
 				<UFormField
@@ -86,7 +74,6 @@
 						type="password"
 						autocomplete="current-password"
 						class="w-full"
-						:disabled="legacyLocked"
 					/>
 				</UFormField>
 				<UFormField
@@ -99,7 +86,6 @@
 						type="password"
 						autocomplete="new-password"
 						class="w-full"
-						:disabled="legacyLocked"
 					/>
 				</UFormField>
 			</div>
@@ -148,7 +134,6 @@ const error = ref('');
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const session = useUserSession();
-const legacyLocked = computed(() => Boolean(session.session.value?.legacyPasswordActive));
 
 async function onSubmit() {
 	error.value = '';
