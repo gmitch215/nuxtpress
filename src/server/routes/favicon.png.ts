@@ -1,4 +1,5 @@
 import { kv } from 'hub:kv';
+import { proxyExternalAsset } from '~/server/utils/favicon-proxy';
 
 export default defineEventHandler(async (event) => {
 	const config = useRuntimeConfig();
@@ -19,10 +20,12 @@ export default defineEventHandler(async (event) => {
 		}
 	}
 
+	// external host: proxy through the worker so we get edge caching + origin-outage resilience
 	if (faviconPng && (faviconPng.startsWith('http://') || faviconPng.startsWith('https://'))) {
-		return sendRedirect(event, faviconPng, 301);
+		return proxyExternalAsset(faviconPng, 'image/png');
 	}
 
+	// internal same-origin path: a redirect is the right move (one less worker invocation per favicon)
 	if (faviconPng && faviconPng.startsWith('/') && faviconPng !== '/favicon.png') {
 		return sendRedirect(event, faviconPng, 301);
 	}

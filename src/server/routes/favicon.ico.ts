@@ -1,4 +1,5 @@
 import { kv } from 'hub:kv';
+import { proxyExternalAsset } from '~/server/utils/favicon-proxy';
 
 export default defineEventHandler(async (event) => {
 	const config = useRuntimeConfig();
@@ -20,7 +21,7 @@ export default defineEventHandler(async (event) => {
 	}
 
 	if (favicon && (favicon.startsWith('http://') || favicon.startsWith('https://'))) {
-		return sendRedirect(event, favicon, 301);
+		return proxyExternalAsset(favicon, 'image/x-icon');
 	}
 
 	if (favicon && favicon.startsWith('/') && favicon !== '/favicon.ico') {
