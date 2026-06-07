@@ -1,5 +1,6 @@
 import { expect, test } from './fixtures';
 import { loginContext } from './utils/auth';
+import { waitForHydration } from './utils/hydration';
 import { createPost, deletePost } from './utils/posts';
 
 test.describe('analytics dashboard', () => {
@@ -31,6 +32,9 @@ test.describe('analytics dashboard', () => {
 		await loginContext(context);
 		await page.goto('/');
 		await page.waitForLoadState('networkidle');
+		await waitForHydration(page);
+		// retry the open in case the modal transition lags; the handler only sets analyticsOpen =
+		// true, so re-clicking is safe (never toggles closed).
 		await expect(async () => {
 			await page.getByTitle(/analytics/i).click();
 			await expect(page.getByText(/views over time/i)).toBeVisible({ timeout: 3000 });

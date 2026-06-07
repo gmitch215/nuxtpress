@@ -1,5 +1,6 @@
 import { expect, test } from './fixtures';
 import { loginContext } from './utils/auth';
+import { waitForHydration } from './utils/hydration';
 
 test.describe('profile page', () => {
 	test('unauthed users are redirected to home with login modal', async ({ page }) => {
@@ -18,6 +19,7 @@ test.describe('profile page', () => {
 		await loginContext(context);
 		await page.goto('/profile');
 		await page.waitForLoadState('networkidle');
+		await waitForHydration(page);
 		const input = page.getByLabel('Display name');
 		await input.fill(`Team Updated ${Date.now()}`);
 		await page.getByRole('button', { name: /save changes/i }).click();

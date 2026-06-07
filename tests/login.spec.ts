@@ -1,10 +1,12 @@
 import { expect, test } from './fixtures';
 import { loginContext } from './utils/auth';
+import { waitForHydration } from './utils/hydration';
 
 test.describe('login', () => {
 	test('rejects invalid credentials', async ({ page }) => {
 		await page.goto('/');
 		await page.waitForLoadState('networkidle');
+		await waitForHydration(page);
 		await page.getByRole('button', { name: /log in/i }).click();
 		await page.getByPlaceholder('Username').fill('admin');
 		await page.getByPlaceholder('Password').fill('wrong-password');
@@ -15,6 +17,7 @@ test.describe('login', () => {
 	test('admin can log in via UI and sees admin actions', async ({ page }) => {
 		await page.goto('/');
 		await page.waitForLoadState('networkidle');
+		await waitForHydration(page);
 		await page.getByRole('button', { name: /log in/i }).click();
 		await page.getByPlaceholder('Username').fill('admin');
 		await page.getByPlaceholder('Password').fill('adminpass');
@@ -26,6 +29,7 @@ test.describe('login', () => {
 		await loginContext(context);
 		await page.goto('/');
 		await page.waitForLoadState('networkidle');
+		await waitForHydration(page);
 		await page.getByRole('button', { name: /new post/i }).waitFor({ timeout: 10_000 });
 		await page.getByTitle(/log out/i).click();
 		await expect(page.getByRole('button', { name: /log in/i })).toBeVisible();

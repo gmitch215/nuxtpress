@@ -1,4 +1,5 @@
 import { expect, test } from './fixtures';
+import { waitForHydration } from './utils/hydration';
 
 test.describe('home page', () => {
 	test('renders site name and primary actions', async ({ page }) => {
@@ -11,6 +12,7 @@ test.describe('home page', () => {
 	test('login modal opens and closes', async ({ page }) => {
 		await page.goto('/');
 		await page.waitForLoadState('networkidle');
+		await waitForHydration(page);
 		await page.getByRole('button', { name: /log in/i }).click();
 		await expect(page.getByPlaceholder('Username')).toBeVisible({ timeout: 5000 });
 		await expect(page.getByPlaceholder('Password')).toBeVisible();
