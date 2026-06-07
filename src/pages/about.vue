@@ -35,4 +35,12 @@ useSeoMeta({
 	ogTitle: `About - ${name}`,
 	ogDescription: `Learn more about ${settings.value.author || config.public.author} and the ${name} blog.`
 });
+
+useSchemaOrg([
+	defineWebPage({
+		name: `About - ${name}`,
+		description: `Learn more about ${settings.value.author || config.public.author} and the ${name} blog.`,
+		url: `${config.public.baseURL}/about`
+	})
+]);
 </script>

@@ -103,12 +103,21 @@ const monthName = computed(() => {
 });
 
 const name = settings.value.name || config.public.name;
+
 useSeoMeta({
 	title: `Posts from ${monthName.value} ${year} - ${name}`,
 	description: `Read blog posts published in ${monthName.value} ${year} at ${name}.`,
 	ogTitle: `Posts from ${monthName.value} ${year} - ${name}`,
 	ogDescription: `Read blog posts published in ${monthName.value} ${year} at ${name}.`
 });
+
+useSchemaOrg([
+	defineWebPage({
+		name: `Posts from ${monthName.value} ${year}`,
+		description: `Read blog posts published in ${monthName.value} ${year} at ${name}.`,
+		url: `${config.public.baseURL}/${year}/${month}`
+	})
+]);
 
 const filteredPosts = computed(() => {
 	return posts.value.filter((post) => {

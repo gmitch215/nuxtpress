@@ -383,7 +383,7 @@ if (!post.value) {
 	});
 }
 
-const localThumbnailUrl = ref<string | null>(null);
+const localThumbnailUrl = ref<string | undefined>(undefined);
 
 function revokeLocalThumbnailUrl() {
 	if (
@@ -395,7 +395,7 @@ function revokeLocalThumbnailUrl() {
 		URL.revokeObjectURL(localThumbnailUrl.value);
 	}
 
-	localThumbnailUrl.value = null;
+	localThumbnailUrl.value = undefined;
 }
 
 function toThumbnailBytes(value: unknown): Uint8Array | null {
@@ -448,7 +448,7 @@ watch(
 );
 
 const thumbnailUrl = computed(() => {
-	if (!post.value) return null;
+	if (!post.value) return undefined;
 	if (post.value.thumbnail_url) return post.value.thumbnail_url;
 	return localThumbnailUrl.value;
 });
@@ -525,7 +525,7 @@ useHead({
 });
 
 useSchemaOrg([
-	defineWebPage({
+	defineArticle({
 		name: `${name} | ${post?.value.title || 'Blog Post'}`,
 		description:
 			post?.value.content.slice(0, 360).replace(/\n/g, ' ') ||

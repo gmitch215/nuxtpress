@@ -78,6 +78,14 @@ useSeoMeta({
 	description: `Read blog posts published in ${year} at ${name}.`
 });
 
+useSchemaOrg([
+	defineWebPage({
+		name: `Posts from ${year} - ${name}`,
+		description: `Read blog posts published in ${year} at ${name}.`,
+		url: `${config.public.baseURL}/${year}`
+	})
+]);
+
 const filteredPosts = computed(() => {
 	return posts.value.filter((post) => {
 		const postDate = new Date(post.created_at);

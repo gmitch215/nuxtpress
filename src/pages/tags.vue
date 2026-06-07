@@ -55,6 +55,13 @@ useSeoMeta({
 	ogTitle: `Tags - ${name}`,
 	ogDescription: `Browse blog posts by tags at ${name}.`
 });
+useSchemaOrg([
+	defineWebPage({
+		name: `Tags - ${name}`,
+		description: `Browse blog posts by tags at ${name}.`,
+		url: `${config.public.baseURL}/tags`
+	})
+]);
 
 const tags = computed(() => {
 	const tagSet = new Set<string>();

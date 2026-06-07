@@ -105,6 +105,17 @@ useSeoMeta({
 	ogDescription: `Read blog posts published on ${monthName.value} ${day}, ${year} at ${name}.`
 });
 
+useSchemaOrg([
+	defineWebPage({
+		name: `Posts from ${monthName.value} ${day}, ${year}`,
+		description: `A collection of blog posts published on ${monthName.value} ${day}, ${year}.`,
+		url: `${config.public.baseURL}/${year}/${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`,
+		image: `${config.public.baseURL}/api/og?title=Posts%20from%20${encodeURIComponent(
+			monthName.value
+		)}%20${day}%2C%20${year}`
+	})
+]);
+
 const filteredPosts = computed(() => {
 	return posts.value.filter((post) => {
 		const postDate = new Date(post.created_at);

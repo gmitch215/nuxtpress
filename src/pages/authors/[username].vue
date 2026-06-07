@@ -72,4 +72,15 @@ useSeoMeta({
 		() => author.value?.bio || `Posts by ${author.value?.displayName ?? username.value}`
 	)
 });
+
+useSchemaOrg([
+	definePerson({
+		name: author.value?.displayName ?? username.value,
+		description: author.value?.bio || `Posts by ${author.value?.displayName ?? username.value}`,
+		image: author.value?.avatarPathname
+			? `${config.public.baseURL}/api/avatars/${author.value.avatarPathname}`
+			: undefined,
+		url: `${config.public.baseURL}/authors/${author.value?.username ?? username.value}`
+	})
+]);
 </script>
