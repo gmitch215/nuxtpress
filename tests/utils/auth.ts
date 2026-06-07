@@ -23,3 +23,13 @@ export async function loginContext(context: BrowserContext, creds = TEST_ADMIN):
 	const res = await context.request.post('/api/login', { data: creds });
 	if (!res.ok()) throw new Error(`context login failed: ${res.status()}`);
 }
+
+export async function resetAdminPassword(request: APIRequestContext): Promise<void> {
+	await loginViaApi(request);
+	const list = await (await request.get('/api/admin/users')).json();
+	const admin = list.find?.((u: { username: string }) => u.username === 'admin');
+	if (admin)
+		await request.patch(`/api/admin/users/${admin.id}`, {
+			data: { password: TEST_ADMIN.password }
+		});
+}

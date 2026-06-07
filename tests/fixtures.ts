@@ -14,7 +14,7 @@ export const test = baseTest.extend<{ autoCoverage: void }>({
 			await use();
 			if (shouldCollect) {
 				const coverage = await page.coverage.stopJSCoverage();
-				await addCoverageReport(coverage, testInfo);
+				if (coverage.length > 0) await addCoverageReport(coverage, testInfo);
 			}
 		},
 		{ auto: true }

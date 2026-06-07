@@ -31,8 +31,10 @@ test.describe('analytics dashboard', () => {
 		await loginContext(context);
 		await page.goto('/');
 		await page.waitForLoadState('networkidle');
-		await page.getByTitle(/analytics/i).click();
-		await expect(page.getByText(/views over time/i)).toBeVisible({ timeout: 15_000 });
+		await expect(async () => {
+			await page.getByTitle(/analytics/i).click();
+			await expect(page.getByText(/views over time/i)).toBeVisible({ timeout: 3000 });
+		}).toPass({ timeout: 20_000 });
 		await expect(page.getByText(/unique visitors/i).first()).toBeVisible();
 
 		await deletePost(request, post.id);

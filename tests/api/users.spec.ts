@@ -1,5 +1,6 @@
 import { expect, test } from '../fixtures';
 import { loginViaApi } from '../utils/auth';
+import { createUser, deleteUser } from '../utils/users';
 
 test.describe('users API', () => {
 	test('GET /api/users/admin returns the seeded admin profile', async ({ request }) => {
@@ -34,23 +35,30 @@ test.describe('users API', () => {
 		}
 	});
 
-	test('PATCH /api/users/me can change admin password even while NUXT_PASSWORD is set', async ({
-		request
-	}) => {
-		await loginViaApi(request);
-		const newPw = 'something-new-and-strong-pw';
-		const res = await request.patch('/api/users/me', {
-			data: {
-				currentPassword: 'adminpass',
-				newPassword: newPw
-			}
-		});
-		expect(res.ok()).toBe(true);
-		// the env-var fallback still works as a legacy backdoor, so the original creds keep logging in
-		await loginViaApi(request);
-		// restore the hash to the env value so later tests that PATCH via "adminpass" still verify
-		await request.patch('/api/users/me', {
-			data: { currentPassword: newPw, newPassword: 'adminpass' }
-		});
+	test('PATCH /api/users/me lets a user change their own password', async ({ request }) => {
+		const user = await createUser(request);
+		try {
+			await loginViaApi(request, { username: user.username, password: user.password });
+			const newPw = 'something-new-and-strong-pw';
+			const res = await request.patch('/api/users/me', {
+				data: { currentPassword: user.password, newPassword: newPw }
+			});
+			expect(res.ok()).toBe(true);
+
+			// the new password works and the old one no longer does (no env fallback for non-admins)
+			await loginViaApi(request, { username: user.username, password: newPw });
+			const stale = await request.post('/api/login', {
+				data: { username: user.username, password: user.password }
+			});
+			expect(stale.status()).toBe(401);
+
+			// wrong current password is rejected
+			const wrong = await request.patch('/api/users/me', {
+				data: { currentPassword: 'not-the-password', newPassword: 'whatever-else-123' }
+			});
+			expect(wrong.status()).toBe(401);
+		} finally {
+			await deleteUser(request, user.id);
+		}
 	});
 });
