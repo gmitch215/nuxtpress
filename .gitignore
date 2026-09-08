@@ -1,7 +1,9 @@
 # Nuxt dev/build outputs
 .output
 .data
+.data-*
 .nuxt
+.nuxt-*
 .nitro
 .cache
 dist
@@ -27,3 +29,4 @@ playwright-report
 playwright-results
 test-results
 coverage
+.data-setup-test
