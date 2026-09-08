@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.20260702.1",
-    "@libsql/client": "^0.17.4",
+    "@libsql/client": "^0.18.0",
     "@nuxt/icon": "^2.5.1",
     "@nuxt/image": "^2.1.0",
     "@nuxt/kit": "^4.5.2",
