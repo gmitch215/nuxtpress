@@ -72,7 +72,7 @@ After deployment, you'll need to configure your blog through environment variabl
 | ----------------------- | ------------------------------------------------- | ------------------ |
 | `NUXT_SESSION_PASSWORD` | 32+ char secret used to seal session cookies      | **yes** (prod)     |
 | `NUXT_ANALYTICS_SALT`   | Random secret used to derive daily visitor hashes | yes for analytics  |
-| `NUXT_PASSWORD`         | Legacy single-password admin (deprecated)         | **no** since 1.3.0 |
+| `NUXT_PASSWORD`         | Bootstrap password for a seeded `admin` account   | **no** since 1.3.0 |
 
 Generate `NUXT_SESSION_PASSWORD` with: `openssl rand -base64 48`.
 
@@ -80,15 +80,14 @@ Generate `NUXT_SESSION_PASSWORD` with: `openssl rand -base64 48`.
 
 When you deploy for the first time, NuxtPress detects that no users exist in the database and redirects every visitor to **`/setup`**, an onboarding screen where you create the first administrator account (username, display name, password, optional bio). After that, log in normally with those credentials.
 
-##### Optional: legacy `NUXT_PASSWORD`
+##### Optional: `NUXT_PASSWORD`
 
-`NUXT_PASSWORD` is no longer required. If you do set it:
+`NUXT_PASSWORD` is not required. If you do set it:
 
-- On a brand-new install, the migration auto-seeds a user named `admin` (display name **Team**) with that password and you can log in immediately without visiting `/setup`.
-- The admin account's password is **locked** while `NUXT_PASSWORD` is set — you can't change it from the profile or admin user UI. Remove the env var (and redeploy) to manage the password from the app.
-- The legacy `{ password }` (no username) login body is still accepted to log in as `admin` for one release. It will be removed in v1.4.0.
+- On a brand-new install, the migration seeds a user named `admin` (display name **Team**) with that password, so you can log in immediately without visiting `/setup`.
+- The admin account's password is **locked** while `NUXT_PASSWORD` is set. You cannot change it from the profile or admin user UI. Remove the env var and redeploy to manage the password from the app.
 
-⚠️ If you set `NUXT_PASSWORD`, treat it as a one-time bootstrap helper; the long-term flow is `/setup` + the user-management UI.
+As of v1.4.0 the password only works because it is stored as a normal password hash on that seeded account. The env variable is no longer accepted as a login credential on its own, and `/api/login` requires both a username and a password. Treat `NUXT_PASSWORD` as a one-time bootstrap helper; the long-term flow is `/setup` plus the user-management UI.
 
 #### Optional Settings
 
@@ -218,6 +217,23 @@ Alternatives and safety tips:
 3. Update your blog information, social links, and appearance
 4. Changes are saved in your Cloudflare KV storage and take effect immediately
 
+#### Post URLs
+
+Every post answers on two URLs:
+
+- `/2026/9/8/my-post` — the dated permalink
+- `/my-post` — the slug on its own
+
+Both always return the post. The **Post URL Style** setting picks which one the blog links to and which one search engines treat as canonical; the other keeps working instead of returning a 404, so existing links never break. The default is the dated form.
+
+Slugs have to be unique across the whole blog, because a slug addresses a post on its own. Creating or renaming a post to a slug that is already taken returns a 409.
+
+#### Analytics
+
+The dashboard behind the chart icon reports views, unique visitors, active reading time, scroll completion, top posts, top pages, referrers, countries, operating systems, devices, browsers, and the signed-in share of traffic.
+
+Visitors are counted with a salted SHA-256 hash of IP address and user agent that rotates every day, so the same person is one visitor within a day and unlinkable across days. What is never stored: IP addresses, user agents, account identities, and anything more precise than a two-letter country code. Requests carrying `DNT: 1` or `Sec-GPC: 1` are dropped before anything is written, as are known crawlers. Set `NUXT_ANALYTICS_SALT` to a random value so the hashes cannot be reproduced from a leaked database.
+
 ---
 
 ## For Developers: Technical Documentation
@@ -286,8 +302,11 @@ NuxtPress is a full-stack blogging platform built with:
 
 - `bun run dev` - Start development server on port 8787
 - `bun run dev:test` - Start dev server with test environment
+- `bun run dev:setup-test` - Start a second dev server on port 8788 against an empty data dir, used by the first-run setup spec
 - `bun run build` - Build for production
 - `bun run preview` - Preview production build locally with NuxtHub
+- `bun run test` - Run the Playwright suite
+- `bun run test:coverage` - Run the suite with V8 coverage reporting
 - `bun run prettier` - Format code with Prettier
 - `bun run prettier:check` - Check code formatting
 
@@ -428,12 +447,13 @@ All API routes are located in `src/server/api/` and are automatically available 
 
 ##### POST `/api/login`
 
-Authenticate with the admin password.
+Authenticate with a username and password. Both fields are required as of v1.4.0.
 
 **Request Body:**
 
 ```json
 {
+	"username": "admin",
 	"password": "your-password"
 }
 ```
@@ -510,7 +530,9 @@ Update blog settings (requires authentication).
 
 ##### GET `/api/blog/list`
 
-Get all blog posts (public endpoint).
+Get every blog post as a summary (public endpoint). Summaries carry a pre-rendered `excerpt`
+instead of the full `content`, and thumbnails come back as a URL rather than inline base64, so
+the response stays small as the blog grows. Use `/api/blog/find` for a single post's body.
 
 **Response:**
 
@@ -520,25 +542,43 @@ Get all blog posts (public endpoint).
 		"id": "unique-id",
 		"title": "Post Title",
 		"slug": "post-slug",
-		"content": "Post content...",
-		"thumbnail_url": "data:image/png;base64,...",
+		"excerpt": "First 200 characters of the post as plain text...",
+		"thumbnail_url": "/thumbnails/unique-id",
 		"created_at": "2025-11-17T00:00:00.000Z",
 		"updated_at": "2025-11-17T00:00:00.000Z",
-		"tags": ["tag1", "tag2"]
+		"tags": ["tag1", "tag2"],
+		"author_id": "author-id",
+		"author": { "username": "admin", "displayName": "Team", "role": "administrator" }
 	}
 ]
 ```
 
-##### GET `/api/blog/find`
+##### GET `/api/blog/search`
 
-Find a specific blog post by ID or slug.
+Search posts by title, body, tag or slug (public endpoint).
 
 **Query Parameters:**
 
-- `id` (optional): Post ID
-- `slug` (optional): Post slug
+- `q` (required): search text, 1-200 characters. Anything else returns `[]`.
 
-**Response:** Single blog post object (same structure as list)
+**Response:** Array of post summaries, same shape as list, capped at 25 results.
+
+##### GET `/api/blog/find`
+
+Find a single blog post, including its full `content`.
+
+**Query Parameters:**
+
+- `slug` (required): Post slug
+- `year`, `month`, `day` (optional): pass all three to match a post published on that date. Omit
+  them to get the newest post with that slug.
+
+**Response:** Single blog post object with `content`
+
+##### GET `/thumbnails/{id}`
+
+Serve a post's stored thumbnail as an image, cached for a day. Posts with a `thumbnail_url` of
+their own do not use this route.
 
 ##### POST `/api/blog/create`
 
@@ -560,7 +600,8 @@ Create a new blog post (requires authentication).
 
 **Response:** Created blog post object
 
-**Note:** Slugs are automatically made unique by appending `-1`, `-2`, etc. if duplicates exist.
+**Note:** Slugs must be unique across the blog, since a slug addresses a post on its own. A
+duplicate returns a 409 rather than being silently renamed.
 
 ##### PATCH `/api/blog/update`
 
