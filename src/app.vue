@@ -10,8 +10,14 @@
 const config = useRuntimeConfig();
 const { settings, fetchSettings } = useSettings();
 
-// fetch settings during ssr to prevent flash of config values
-await fetchSettings();
+// fetched during ssr to prevent a flash of config values; the payload carries it into
+// hydration, so skipping when already populated avoids a duplicate request per page load
+if (Object.keys(settings.value).length === 0) {
+	await fetchSettings();
+}
+
+const siteOrigin = useSiteOrigin();
+useCanonical();
 
 useSeoMeta({
 	charset: 'utf-8',
@@ -42,6 +48,7 @@ useSeoMeta({
 });
 
 useHead({
+	htmlAttrs: { lang: 'en' },
 	link: [
 		{
 			rel: 'icon',
@@ -56,6 +63,12 @@ useHead({
 		{
 			rel: 'apple-touch-icon',
 			href: '/favicon.png'
+		},
+		{
+			rel: 'alternate',
+			type: 'application/atom+xml',
+			title: `${settings.value.name || config.public.name} feed`,
+			href: '/feed.xml'
 		}
 	]
 });
@@ -63,18 +76,25 @@ useHead({
 useSchemaOrg([
 	defineWebSite({
 		name: settings.value.name || config.public.name,
-		url: config.public.site_url,
+		description: settings.value.description || config.public.description,
+		url: siteOrigin,
+		inLanguage: 'en',
 		image: {
 			'@type': 'ImageObject',
-			url: config.public.site_url + '/favicon.png'
+			url: `${siteOrigin}/favicon.png`
 		},
 		publisher: {
 			'@type': 'Organization',
 			name: settings.value.name || config.public.name,
 			logo: {
 				'@type': 'ImageObject',
-				url: config.public.site_url + '/favicon.png'
+				url: `${siteOrigin}/favicon.png`
 			}
+		},
+		potentialAction: {
+			'@type': 'SearchAction',
+			target: `${siteOrigin}/tags?tag={search_term_string}`,
+			'query-input': 'required name=search_term_string'
 		}
 	})
 ]);
