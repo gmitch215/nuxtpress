@@ -32,6 +32,16 @@ function convertEmojis(content: string): string {
 	});
 }
 
+/**
+ * Shifts body headings down one level so the post title keeps the page's only h1. Matches the
+ * bare tags marked emits; an escaped tag inside a code block reads as `&lt;h1&gt;` and is left alone.
+ */
+function demoteHeadings(html: string): string {
+	return html.replace(/<(\/?)h([1-5])>/g, (_, slash: string, level: string) => {
+		return `<${slash}h${Number(level) + 1}>`;
+	});
+}
+
 export function useMarkdown() {
 	const renderMarkdown = (content: string): string => {
 		content = convertEmojis(content);
@@ -57,7 +67,7 @@ export function useMarkdown() {
 			gfm: true
 		});
 
-		return typeof html === 'string' ? html : '';
+		return typeof html === 'string' ? demoteHeadings(html) : '';
 	};
 
 	return { renderMarkdown };

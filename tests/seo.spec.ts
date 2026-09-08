@@ -149,6 +149,27 @@ test.describe('seo and crawler indexability', () => {
 		expect(await feedLink.getAttribute('href')).toContain('/feed.xml');
 	});
 
+	test('every public page has exactly one h1', async ({ page, request }) => {
+		const slug = `seo-h1-${Date.now()}`;
+		const post = await createPost(request, { title: 'Heading Post', slug, content: BODY });
+		const d = new Date(post.created_at);
+		const postPath = `/${d.getUTCFullYear()}/${d.getUTCMonth() + 1}/${d.getUTCDate()}/${slug}`;
+
+		for (const path of ['/', '/about', '/tags', `/${d.getUTCFullYear()}`, postPath]) {
+			await page.goto(path);
+			const h1s = page.locator('h1');
+			await expect(h1s, `h1 count on ${path}`).toHaveCount(1);
+			expect((await h1s.first().textContent())?.trim(), `h1 text on ${path}`).toBeTruthy();
+		}
+
+		// the post title is the h1, so a leading "# heading" in the body renders as an h2
+		await page.goto(postPath);
+		await expect(page.locator('h1')).toHaveText('Heading Post');
+		await expect(page.locator('.prose h2', { hasText: 'Indexable heading' })).toHaveCount(1);
+
+		await deletePost(request, post.id);
+	});
+
 	test('the html element declares a language', async ({ page }) => {
 		await page.goto('/');
 		expect(await page.locator('html').getAttribute('lang')).toBe('en');

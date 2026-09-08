@@ -12,7 +12,7 @@
 	</div>
 
 	<div class="w-full flex flex-col items-center justify-center my-3">
-		<h2 class="text-lg font-semibold">Browse by Tag</h2>
+		<h1 class="text-lg font-semibold">Browse by Tag</h1>
 
 		<div class="flex flex-wrap justify-center mt-2 max-w-100 gap-y-2">
 			<UBadge

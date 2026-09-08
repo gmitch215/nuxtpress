@@ -1,4 +1,5 @@
 <template>
+	<h1 class="sr-only">{{ settings.name || $config.public.name }}</h1>
 	<div class="w-full flex space-x-2 justify-center items-center mt-2">
 		<UButton
 			icon="mdi:refresh"
@@ -181,9 +182,9 @@
 	>
 		<template #body>
 			<div class="flex flex-col gap-2">
-				<h1 class="font-medium text-sm">
+				<p class="font-medium text-sm">
 					Subscribe to the RSS feed to learn more: {{ description }}
-				</h1>
+				</p>
 				<UInput
 					disabled
 					:model-value="`${hostname}/feed.xml`"
