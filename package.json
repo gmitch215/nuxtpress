@@ -16,7 +16,7 @@
     "test:coverage": "COVERAGE=1 NODE_OPTIONS='--max-old-space-size=4096' bunx playwright test",
     "test:report": "NODE_OPTIONS='--max-old-space-size=4096' bunx playwright show-report",
     "prepare": "husky install",
-    "dev:setup-test": "bun scripts/reset-test-data.mjs .data-setup-test && NUXTPRESS_DATA_DIR=.data-setup-test NUXTPRESS_BUILD_DIR=.nuxt-setup-test NUXT_IGNORE_LOCK=1 bunx nuxi dev --no-restart --host 127.0.0.1 --port 8788 --dotenv .config/setup-test.env"
+    "dev:setup-test": "bun scripts/reset-test-data.mjs .data-setup-test && NUXT_PASSWORD= NUXTPRESS_DATA_DIR=.data-setup-test NUXTPRESS_BUILD_DIR=.nuxt-setup-test NUXT_IGNORE_LOCK=1 bunx nuxi dev --no-restart --host 127.0.0.1 --port 8788 --dotenv .config/setup-test.env"
   },
   "peerDependencies": {
     "typescript": "^5.9.3 || ^6.0.0 || ^7.0.0"

@@ -14,6 +14,8 @@
   - [Configuration](#configuration)
   - [Installing Updates](#installing-updates-from-the-template)
   - [Using Your Blog](#using-your-blog)
+  - [Post URLs](#post-urls)
+  - [Analytics](#analytics)
 - [For Developers: Technical Documentation](#for-developers-technical-documentation)
   - [Overview](#overview)
   - [Tech Stack](#tech-stack)
@@ -32,35 +34,39 @@
 
 NuxtPress is a modern blogging platform that's:
 
-- **Fast**: Built on Cloudflare's edge network for lightning-fast performance worldwide
-- **Simple**: Easy to deploy and use with a clean, intuitive interface
-- **Secure**: Password-protected admin panel with session management
-- **Beautiful**: Powered by Nuxt UI v4 for a stunning, responsive design
-- **Free**: Deploy on Cloudflare's free tier
+- **Fast**: Server-rendered on Cloudflare's edge network
+- **Simple**: One Worker, one D1 database, no other infrastructure
+- **Secure**: User accounts with administrator and author roles, sealed session cookies
+- **Findable**: Canonical URLs, an Atom feed, and a sitemap that lists every post
+- **Free**: Runs on Cloudflare's free tier
 
 ### Deploy Your Own Blog
 
-#### Option 1: One-Click Deploy to NuxtHub (Recommended)
+#### Option 1: Deploy to Cloudflare
 
-1. Click the "Deploy to NuxtHub" button above
-2. Connect your GitHub account
-3. NuxtHub will automatically:
-   - Fork this repository to your account
-   - Set up Cloudflare Workers integration
-   - Deploy your blog
-   - Provision the database and KV storage
-4. Configure your blog settings (see below)
-5. Start writing!
+1. Click the "Deploy to Cloudflare" button above
+2. Connect your GitHub account and let Cloudflare fork the repository
+3. Cloudflare provisions the Worker, the D1 database and the KV namespaces from `wrangler.jsonc`
+4. Set `NUXT_SESSION_PASSWORD` and `NUXT_ANALYTICS_SALT` (see below), then redeploy
+5. Open your blog and create the first administrator at `/setup`
 
-#### Option 2: Manual Deployment
+#### Option 2: Deploy With Wrangler
 
-If you prefer to deploy manually:
+```bash
+git clone https://github.com/gmitch215/nuxtpress.git
+cd nuxtpress
+bun install
+bun run build
+bunx wrangler --cwd .output deploy
+```
 
-1. Fork this repository
-2. Create a [NuxtHub](https://hub.nuxt.com) account
-3. Link your repository to NuxtHub
-4. Deploy from the NuxtHub dashboard
-5. Configure environment variables (see below)
+The build targets Cloudflare Workers, so the whole app deploys as one Worker. Do not deploy
+`.output/public` on its own; that directory holds only the static assets and none of the server.
+
+#### Option 3: Workers Builds
+
+Connect the repository in [Workers & Pages](https://dash.cloudflare.com/?to=/:account/workers-and-pages)
+and Cloudflare rebuilds and redeploys on every push to `master`.
 
 ### Configuration
 
@@ -110,12 +116,16 @@ These can be configured via environment variables or through the admin panel aft
 | `NUXT_PUBLIC_DISCORD`       | Discord server URL     | _(empty)_                     |
 | `NUXT_PUBLIC_SUPPORT_EMAIL` | Support email address  | _(empty)_                     |
 
-**How to set environment variables in NuxtHub:**
+**How to set environment variables:**
 
-1. Go to your project on hub.nuxt.com
-2. Navigate to Settings → Environment Variables
-3. Add your variables
-4. Redeploy your application
+Plain values go in the Cloudflare dashboard under Workers & Pages → your Worker → Settings →
+Variables. Secrets are better set from the CLI, which keeps them out of the dashboard's plaintext
+list:
+
+```bash
+bunx wrangler secret put NUXT_SESSION_PASSWORD
+bunx wrangler secret put NUXT_ANALYTICS_SALT
+```
 
 ### Installing updates from the template
 
@@ -157,14 +167,14 @@ git merge template/experimental --allow-unrelated-histories -m "chore: merge tem
 ```bash
 git fetch --tags template
 git switch master
-git merge template/v1.0.2 --allow-unrelated-histories -m "chore: merge template v1.0.2"
+git merge v1.0.2 --allow-unrelated-histories -m "chore: merge template v1.0.2"
 ```
 
 If you prefer to create a local branch that mirrors the tagged state, you can do:
 
 ```bash
 git fetch --tags template
-git checkout -b update-v1.0.2 template/v1.0.2
+git checkout -b update-v1.0.2 v1.0.2
 # Inspect changes, then merge into master if desired
 git switch master
 git merge update-v1.0.2
@@ -188,34 +198,37 @@ Alternatives and safety tips:
 
 #### Logging In
 
-1. Navigate to your blog URL
-2. Click the login button in the navigation
-3. Enter your password (the one you set in `NUXT_PASSWORD`)
+1. Open your blog and click "Log In"
+2. Enter the username and password of the account you created at `/setup`
+
+Administrators can add more accounts at `/admin/users`, as either administrators or authors. An
+author can write and edit their own posts; an administrator can also manage users and settings.
 
 #### Creating a Blog Post
 
-1. Log in to your blog
-2. Click "New Post" or navigate to `/create`
-3. Fill in:
+1. Log in, then click "New Post" on the home page
+2. Fill in:
    - **Title**: Your post title
-   - **Slug**: URL-friendly version (auto-generated from title)
-   - **Content**: Your post content (supports Markdown)
+   - **Slug**: URL segment, generated from the title and editable. It must be unique across the blog
+   - **Content**: Markdown, with a rich-text editor and a live preview
    - **Tags**: Comma-separated tags
-   - **Thumbnail** (optional): Upload an image
-4. Click "Publish"
+   - **Thumbnail** (optional): Upload an image or point at an external URL
+3. Click "Publish"
+
+Drafts save as you type and reappear in the form the next time you open it.
 
 #### Managing Posts
 
-- **Edit**: Click on any post while logged in to edit it
-- **Delete**: Use the delete button on a post's edit page
-- **View**: All posts are automatically listed on your homepage
+- **Edit**: Open a post while logged in and click the pencil next to the title
+- **Delete**: Open a post and click the bin next to the title
+- **View**: Every post is listed on the home page, with archives by year, month and day
 
 #### Customizing Settings
 
-1. Log in to your blog
-2. Navigate to `/settings`
-3. Update your blog information, social links, and appearance
-4. Changes are saved in your Cloudflare KV storage and take effect immediately
+1. Log in, then click the settings icon on the home page
+2. Update the blog name, description, author, theme color, favicons, social links, post URL style,
+   and the optional site-wide banner message
+3. Settings save to KV and take effect immediately
 
 #### Post URLs
 
@@ -243,29 +256,35 @@ Visitors are counted with a salted SHA-256 hash of IP address and user agent tha
 NuxtPress is a full-stack blogging platform built with:
 
 - **Frontend**: Nuxt 4 with Vue 3, Nuxt UI v4, and Tailwind CSS
-- **Backend**: Nuxt server routes with Cloudflare Workers
-- **Database**: Cloudflare D1 (SQLite on the edge)
-- **Storage**: Cloudflare KV for caching and settings
-- **Validation**: Zod schemas for type-safe data validation
-- **Deployment**: NuxtHub for seamless Cloudflare integration
+- **Backend**: Nitro server routes running on Cloudflare Workers
+- **Database**: Cloudflare D1 through Drizzle ORM
+- **Storage**: Cloudflare KV for settings, caches and analytics; blob storage for avatars
+- **Auth**: `nuxt-auth-utils` sealed session cookies, validated against the users table per request
+- **Validation**: Zod schemas shared between client and server
+- **Deployment**: One Cloudflare Worker, deployed with Wrangler or Workers Builds
 
 ### Tech Stack
 
-- **[Nuxt 4](https://nuxt.com/)**: Vue.js framework with SSR/SSG
-- **[Nuxt UI v4](https://ui.nuxt.com/)**: Beautiful UI component library
-- **[@nuxthub/core](https://hub.nuxt.com/)**: Cloudflare Workers integration
-- **[Cloudflare D1](https://developers.cloudflare.com/d1/)**: Edge SQL database
-- **[Cloudflare KV](https://developers.cloudflare.com/kv/)**: Edge key-value storage
-- **[Zod](https://zod.dev/)**: TypeScript-first schema validation
-- **[Luxon](https://moment.github.io/luxon/)**: Modern date/time handling
-- **[Tailwind CSS v4](https://tailwindcss.com/)**: Utility-first CSS framework
+- **[Nuxt 4](https://nuxt.com/)**: Vue framework, server-rendered
+- **[Nuxt UI v4](https://ui.nuxt.com/)**: Component library
+- **[@nuxthub/core](https://hub.nuxt.com/)**: D1, KV and blob bindings, with local equivalents for `nuxt dev`
+- **[Drizzle ORM](https://orm.drizzle.team/)**: Typed SQL against D1
+- **[nuxt-auth-utils](https://github.com/atinux/nuxt-auth-utils)**: Sealed session cookies and password hashing
+- **[Cloudflare D1](https://developers.cloudflare.com/d1/)**: SQLite on the edge
+- **[Cloudflare KV](https://developers.cloudflare.com/kv/)**: Key-value storage
+- **[Zod](https://zod.dev/)**: Schema validation
+- **[marked](https://marked.js.org/)** + **[highlight.js](https://highlightjs.org/)**: Markdown rendering and syntax highlighting
+- **[TipTap](https://tiptap.dev/)**: Rich-text editing in the post form
+- **[unovis](https://unovis.dev/)**: Analytics charts
+- **[Tailwind CSS v4](https://tailwindcss.com/)**: Utility-first CSS
+- **[Playwright](https://playwright.dev/)**: End-to-end tests
 
 ### Local Development
 
 #### Prerequisites
 
-- [Bun](https://bun.sh/) or Node.js 18+
-- A Cloudflare account (for deployment)
+- [Bun](https://bun.sh/), or Node.js 22.19+ (Nuxt 4 requires 22.19, 24.11, or 26 and up)
+- A Cloudflare account, for deployment only. Local development needs no Cloudflare resources
 
 #### Setup
 
@@ -282,11 +301,14 @@ NuxtPress is a full-stack blogging platform built with:
    bun install
    ```
 
-3. Set up environment variables:
+3. Create a `.env` with a session secret. Everything else has a working default:
 
    ```bash
-   cp .env.example .env
+   printf 'NUXT_SESSION_PASSWORD=%s\nNUXT_ANALYTICS_SALT=%s\n' \
+     "$(openssl rand -base64 48)" "$(openssl rand -hex 16)" > .env
    ```
+
+   See [Configuration](#configuration) for the full list.
 
    Edit `.env` and set your `NUXT_PASSWORD` and other configuration.
 
@@ -300,23 +322,28 @@ NuxtPress is a full-stack blogging platform built with:
 
 #### Available Scripts
 
-- `bun run dev` - Start development server on port 8787
-- `bun run dev:test` - Start dev server with test environment
-- `bun run dev:setup-test` - Start a second dev server on port 8788 against an empty data dir, used by the first-run setup spec
+- `bun run dev` - Start the development server on port 8787
+- `bun run dev:test` - Start the dev server with the test environment file
+- `bun run dev:cloudflare` - Build, then serve the Worker locally through Wrangler
+- `bun run dev:setup-test` - Start a second dev server on port 8788 against an empty data directory, used by the first-run setup spec
 - `bun run build` - Build for production
-- `bun run preview` - Preview production build locally with NuxtHub
 - `bun run test` - Run the Playwright suite
+- `bun run test:headed` - Run the suite with a visible browser
 - `bun run test:coverage` - Run the suite with V8 coverage reporting
+- `bun run test:report` - Open the last HTML test report
 - `bun run prettier` - Format code with Prettier
 - `bun run prettier:check` - Check code formatting
 
-#### Migrating from Pre-v0.10 NuxtHub
+#### Migrating an Older Deployment
 
-If you're upgrading an existing Cloudflare-deployed NuxtPress project from pre-v0.10, the migration is straightforward. The main changes are:
+NuxtHub's own hosting platform was sunset on 31 December 2025. NuxtPress still uses
+`@nuxthub/core` for its D1, KV and blob bindings, but deployment and hosting are now entirely
+your own Cloudflare account. If you deployed an earlier NuxtPress through the NuxtHub dashboard,
+the changes are:
 
-- **Database**: Now uses Drizzle ORM instead of `hubDatabase()`
-- **Bindings**: Configure via `wrangler.jsonc` (NuxtHub no longer auto-generates)
-- **Deployment**: Use Cloudflare's native tools (Workers/Pages CI or Wrangler)
+- **Database**: Drizzle ORM, replacing `hubDatabase()`
+- **Bindings**: declared in `wrangler.jsonc` rather than generated for you
+- **Deployment**: Wrangler or Workers Builds
 
 ##### Link Your Existing Cloudflare Resources
 
@@ -370,7 +397,7 @@ bunx wrangler d1 execute DB --file "migrations/migrate_timestamps.sql"
 
 Use Cloudflare's deployment tools:
 
-**Via Workers/Pages CI (Recommended)**:
+**Via Workers Builds**:
 
 - Connect your Git repository in [Workers & Pages](https://dash.cloudflare.com/?to=/:account/workers-and-pages)
 - Automatic deployments on every push
@@ -379,64 +406,62 @@ Use Cloudflare's deployment tools:
 
 ```bash
 bun run build
-npx wrangler pages deploy .output/public --project-name=nuxtpress
+bunx wrangler --cwd .output deploy
 ```
 
-Set environment variables (like `NUXT_PASSWORD`) in:
-
-- Cloudflare Dashboard → Your Project → Settings → Environment Variables
+Set environment variables in the Cloudflare dashboard under Workers & Pages → your Worker →
+Settings → Variables, and set secrets with `bunx wrangler secret put <NAME>`.
 
 ### Project Structure
 
 ```
 nuxtpress/
 ├── src/
-│   ├── app.vue                 # Root application component
-│   ├── error.vue              # Error page component
-│   ├── assets/                # Static assets
-│   │   └── css/main.css       # Global styles
-│   ├── components/            # Vue components
-│   │   ├── BlogForm.vue       # Blog post creation/edit form
-│   │   ├── BlogPostGroup.vue  # Blog post listing component
-│   │   ├── Footer.vue         # Site footer
-│   │   ├── LoginForm.vue      # Authentication form
-│   │   ├── NavBar.vue         # Navigation bar
-│   │   └── SettingsForm.vue   # Settings management form
-│   ├── composables/           # Vue composables
-│   │   ├── useDatabase.ts     # Database utilities
-│   │   └── useLogin.ts        # Authentication utilities
-│   ├── layouts/               # Nuxt layouts
-│   │   └── default.vue        # Default layout
-│   ├── pages/                 # File-based routing
-│   │   ├── index.vue          # Homepage (blog list)
-│   │   └── [year]/            # Date-based blog routes
-│   │       ├── index.vue      # Posts by year
-│   │       └── [month]/
-│   │           ├── index.vue  # Posts by month
-│   │           └── [day]/
-│   │               ├── index.vue    # Posts by day
-│   │               └── [slug].vue   # Individual post
-│   ├── server/                # Server-side code
-│   │   ├── utils.ts           # Server utilities
-│   │   └── api/               # API routes
-│   │       ├── login.post.ts  # User login
-│   │       ├── logout.post.ts # User logout
-│   │       ├── verify.get.ts  # Session verification
-│   │       ├── settings.get.ts    # Get settings
-│   │       ├── settings.post.ts   # Update settings
-│   │       └── blog/          # Blog API endpoints
-│   │           ├── create.post.ts  # Create post
-│   │           ├── find.get.ts     # Find post by ID/slug
-│   │           ├── list.get.ts     # List all posts
-│   │           ├── update.patch.ts # Update post
-│   │           └── remove.delete.ts # Delete post
-│   └── shared/                # Shared utilities
-│       ├── schemas.ts         # Zod validation schemas
-│       └── types.ts           # TypeScript types
-├── public/                    # Public static files
-├── nuxt.config.ts             # Nuxt configuration
-├── package.json               # Dependencies
-└── tsconfig.json              # TypeScript configuration
+│   ├── app.vue                     # Root component: site-wide meta, canonical, schema.org
+│   ├── error.vue                   # Error page
+│   ├── assets/css/                 # Global styles and prose styles
+│   ├── components/
+│   │   ├── analytics/TopTable.vue  # Top posts / top pages table
+│   │   ├── blog/Article.vue        # Post view, shared by both permalinks
+│   │   ├── AnalyticsDashboard.vue  # Admin analytics modal
+│   │   ├── BlogForm.vue            # Post create/edit form
+│   │   ├── BlogPostGroup.vue       # Post listing
+│   │   ├── SearchButton.vue        # Command-palette post search
+│   │   └── SettingsForm.vue        # Site settings form
+│   ├── composables/
+│   │   ├── useAnalytics.ts         # Client beacon: active time, scroll depth
+│   │   ├── useBlogPostPage.ts      # Loads and describes one post
+│   │   ├── useBlogPostSeo.ts       # Article meta and structured data
+│   │   ├── useCanonical.ts         # Site origin and rel=canonical
+│   │   ├── useDatabase.ts          # Post list and settings state
+│   │   ├── usePostUrl.ts           # Permalink resolution
+│   │   └── useSanitizeHtml.ts      # Markdown output sanitizer
+│   ├── middleware/                 # Route guards: auth, admin, first-run setup
+│   ├── pages/
+│   │   ├── index.vue               # Home
+│   │   ├── [slug].vue              # Slug-only permalink
+│   │   ├── [year]/…/[slug].vue     # Dated permalink and date archives
+│   │   ├── admin/users.vue         # User management
+│   │   ├── authors/[username].vue  # Author profile
+│   │   └── setup.vue               # First-run onboarding
+│   ├── plugins/                    # Client plugins, including page-view tracking
+│   ├── server/
+│   │   ├── api/                    # Blog, auth, users, settings, analytics, sitemap
+│   │   ├── db/schema.ts            # Drizzle schema
+│   │   ├── middleware/             # Session bootstrap
+│   │   ├── plugins/                # Session hooks
+│   │   ├── routes/                 # feed.xml, favicons, avatars, thumbnails
+│   │   └── utils/                  # auth, db, posts, analytics, ua
+│   ├── shared/                     # Zod schemas and types shared with the client
+│   └── types/                      # Session type augmentation
+├── tests/                          # Playwright specs and helpers
+├── scripts/                        # Maintenance scripts
+├── migrations/                     # Manual SQL for older installs
+├── public/                         # Static files
+├── nuxt.config.ts
+├── playwright.config.ts
+├── wrangler.jsonc                  # D1 and KV bindings
+└── tsconfig.json
 ```
 
 ### API Documentation
@@ -466,7 +491,10 @@ Authenticate with a username and password. Both fields are required as of v1.4.0
 }
 ```
 
-Sets a secure session cookie valid for 30 days.
+Sets a sealed, `HttpOnly`, `SameSite=Lax` session cookie, marked `Secure` in production. No
+`Max-Age` is configured, so the cookie lasts until the browser session ends. The session payload
+is re-validated against the users table on every request, so deactivating an account or changing
+a role takes effect immediately rather than at the next login.
 
 ##### POST `/api/logout`
 
@@ -638,9 +666,50 @@ Delete a blog post (requires authentication).
 }
 ```
 
+#### Users and Setup
+
+| Endpoint                | Method         | Access              | Purpose                                        |
+| ----------------------- | -------------- | ------------------- | ---------------------------------------------- |
+| `/api/setup/status`     | GET            | public              | Whether any user exists yet                    |
+| `/api/setup/init`       | POST           | public until set up | Create the first administrator; 409 afterwards |
+| `/api/users/{username}` | GET            | public              | Author profile and their posts                 |
+| `/api/users/me`         | PATCH          | authenticated       | Update own display name, bio or password       |
+| `/api/users/me/avatar`  | POST / DELETE  | authenticated       | Upload or clear own avatar                     |
+| `/api/admin/users`      | GET / POST     | administrator       | List or create users                           |
+| `/api/admin/users/{id}` | PATCH / DELETE | administrator       | Update or delete a user                        |
+
+Guards worth knowing: you cannot delete your own account, and you cannot demote or delete the last
+remaining administrator.
+
+#### Drafts
+
+| Endpoint          | Method | Access        | Purpose                     |
+| ----------------- | ------ | ------------- | --------------------------- |
+| `/api/blog/draft` | GET    | authenticated | List your saved drafts      |
+| `/api/blog/draft` | POST   | authenticated | Save a draft, keyed by slug |
+
+#### Analytics
+
+| Endpoint                 | Method | Access        | Purpose                                                          |
+| ------------------------ | ------ | ------------- | ---------------------------------------------------------------- |
+| `/api/analytics/track`   | POST   | public        | Beacon endpoint. Always 204, never reports why a hit was dropped |
+| `/api/analytics/summary` | GET    | administrator | Aggregated report; `range` is `7d`, `30d`, `90d` or `all`        |
+
+#### Generated Routes
+
+| Route                          | Purpose                                          |
+| ------------------------------ | ------------------------------------------------ |
+| `/feed.xml`                    | Atom feed of the 50 most recent posts            |
+| `/sitemap.xml`                 | Every post, date archive and author page         |
+| `/robots.txt`                  | Crawl rules. Indexing is disabled in development |
+| `/thumbnails/{id}`             | A post's stored thumbnail image                  |
+| `/avatars/{pathname}`          | A user's avatar image                            |
+| `/favicon.ico`, `/favicon.png` | Site icons, proxied when set to an external URL  |
+
 ### Database Schema
 
-NuxtPress uses Cloudflare D1 with the following schema:
+NuxtPress uses Cloudflare D1. Both tables are created and migrated on the first request after a
+deploy, so there is no manual migration step.
 
 #### `blog_posts` Table
 
@@ -648,25 +717,55 @@ NuxtPress uses Cloudflare D1 with the following schema:
 CREATE TABLE IF NOT EXISTS blog_posts (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
-  slug TEXT NOT NULL UNIQUE,
+  slug TEXT NOT NULL,
   content TEXT NOT NULL,
-  thumbnail BLOB,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL,
-  tags TEXT NOT NULL
+  thumbnail TEXT,
+  thumbnail_url TEXT,
+  author_id TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+  tags TEXT
 );
+
+CREATE INDEX idx_blog_posts_slug ON blog_posts(slug);
+CREATE INDEX idx_blog_posts_created_at ON blog_posts(created_at);
+CREATE INDEX idx_blog_posts_slug_created_at ON blog_posts(slug, created_at);
+CREATE INDEX idx_blog_posts_author ON blog_posts(author_id);
 ```
 
-**Fields:**
+- `id`: 32-character hex identifier
+- `slug`: URL segment. Unique across the table, enforced by the create and update endpoints
+- `content`: Markdown
+- `thumbnail`: base64 image, served by `/thumbnails/{id}`
+- `thumbnail_url`: external image URL, used in preference to `thumbnail`
+- `author_id`: references `users.id`, set to null when that user is deleted
+- `created_at` / `updated_at`: milliseconds since the epoch
+- `tags`: comma-separated list, null when the post has no tags
 
-- `id`: Unique identifier (UUID)
-- `title`: Post title
-- `slug`: URL-friendly slug (must be unique)
-- `content`: Post content (Markdown supported)
-- `thumbnail`: Optional image thumbnail (stored as BLOB)
-- `created_at`: Unix timestamp of creation
-- `updated_at`: Unix timestamp of last update
-- `tags`: JSON-encoded array of tags
+#### `users` Table
+
+```sql
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL,
+  bio TEXT,
+  avatar_pathname TEXT,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+);
+
+CREATE UNIQUE INDEX idx_users_username ON users(username);
+```
+
+- `username`: 3-32 characters, lowercase letters, numbers, hyphens and underscores
+- `password_hash`: scrypt hash from `nuxt-auth-utils`. Plaintext passwords are never stored
+- `role`: `administrator` or `author`
+- `avatar_pathname`: key into blob storage, served by `/avatars/{pathname}`
+- `is_active`: `0` suspends the account and invalidates its sessions on the next request
 
 ### Contributing
 
@@ -708,7 +807,8 @@ Contributions are welcome! Here's how to get started:
 - **TypeScript**: Strict mode is enabled; ensure all types are correct
 - **Components**: Use Nuxt UI components when possible for consistency
 - **API Routes**: Use Zod schemas for validation
-- **Server Utils**: Helper functions are in `src/server/utils.ts`
+- **Tests**: Playwright covers every page and API route. Run `bun run test` before opening a pull request
+- **Server Utils**: Helper functions live in `src/server/utils/`: auth, database, post queries, analytics
 - **Database**: Always use parameterized queries to prevent SQL injection
 
 ### License
