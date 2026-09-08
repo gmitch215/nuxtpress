@@ -80,6 +80,21 @@
 		</UFormField>
 
 		<UFormField
+			label="Post URL Style"
+			name="urlStyle"
+			help="Which permalink is shown and treated as canonical; both forms keep working either way"
+			class="min-w-60 w-3/5"
+		>
+			<USelect
+				v-model="state.urlStyle"
+				:items="urlStyleOptions"
+				value-key="value"
+				class="w-full"
+				:disabled="loading"
+			/>
+		</UFormField>
+
+		<UFormField
 			label="Theme Color"
 			name="themeColor"
 			help="Hex color code (e.g., #3B82F6)"
@@ -576,6 +591,7 @@ const state = reactive<SettingsInput>({
 	linkedin: '',
 	discord: '',
 	supportEmail: '',
+	urlStyle: 'dated',
 	message: {
 		text: '',
 		type: 'info',
@@ -699,6 +715,11 @@ const discordUrl = computed(() => {
 	}
 	return '';
 });
+
+const urlStyleOptions = [
+	{ label: 'Dated (/2026/9/8/my-post)', value: 'dated' },
+	{ label: 'Slug Only (/my-post)', value: 'slug' }
+];
 
 const supportEmailUrl = computed(() => {
 	if (!state.supportEmail) return '';

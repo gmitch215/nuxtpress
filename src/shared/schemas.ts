@@ -52,6 +52,7 @@ export const settingsSchema = z.object({
 		.optional()
 		.or(z.literal('')),
 	bio: z.string().max(500, 'Bio must be 500 characters or less').optional(),
+	urlStyle: z.enum(['dated', 'slug']).optional(),
 	message: z
 		.object({
 			text: z

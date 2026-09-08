@@ -1,4 +1,5 @@
 import { kv } from 'hub:kv';
+import { getUrlStyle } from '~/server/utils/posts';
 
 export default defineEventHandler(async (_) => {
 	const config = useRuntimeConfig();
@@ -23,6 +24,7 @@ export default defineEventHandler(async (_) => {
 	const discord = (await kv.get<string>('nuxtpress:setting:discord')) || config.public.discord;
 	const supportEmail =
 		(await kv.get<string>('nuxtpress:setting:support_email')) || config.public.supportEmail;
+	const urlStyle = await getUrlStyle();
 	const rawMessage = await kv.get<string | Record<string, unknown>>('nuxtpress:setting:message');
 	let message: {
 		text: string;
@@ -74,6 +76,7 @@ export default defineEventHandler(async (_) => {
 		linkedin,
 		discord,
 		supportEmail,
+		urlStyle,
 		message
 	};
 });

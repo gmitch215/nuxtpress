@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
-import { kv } from 'hub:kv';
 import { blogPosts } from '~/server/db/schema';
 import { requireOwnerOrAdmin } from '~/server/utils/auth';
 import { ensureDatabase } from '~/server/utils/db';
+import { invalidatePost, invalidatePostCaches } from '~/server/utils/posts';
 
 export default defineEventHandler(async (event) => {
 	await ensureDatabase();
@@ -24,19 +24,9 @@ export default defineEventHandler(async (event) => {
 
 	await db.delete(blogPosts).where(eq(blogPosts.id, id));
 
-	await kv.del('nuxtpress:blog_posts_list');
-	await kv.del('nuxtpress:blog_posts_list:v1');
-	await kv.del('nuxtpress:blog_posts_list:v2');
-	await kv.del('nuxtpress:feed_xml:v2');
+	await invalidatePostCaches();
 
 	if (post?.slug) {
-		await kv.del(`nuxtpress:slug_exists:${post.slug}`);
-		const postDate = new Date(post.createdAt);
-		const y = postDate.getUTCFullYear();
-		const m = postDate.getUTCMonth() + 1;
-		const d = postDate.getUTCDate();
-		for (const v of ['', 'v2:', 'v3:']) {
-			await kv.del(`nuxtpress:blog_post:${v}${post.slug}:${y}:${m}:${d}`);
-		}
+		await invalidatePost(post.slug, post.createdAt);
 	}
 });

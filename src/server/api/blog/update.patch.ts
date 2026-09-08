@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
-import { kv } from 'hub:kv';
 import { blogPosts } from '~/server/db/schema';
 import { requireOwnerOrAdmin } from '~/server/utils/auth';
 import { ensureDatabase } from '~/server/utils/db';
+import { invalidatePost, invalidatePostCaches, slugTaken } from '~/server/utils/posts';
 import { blogPostUpdateSchema } from '~/shared/schemas';
-import { BlogPostData } from '~/shared/types';
+import type { BlogPostData } from '~/shared/types';
 
 export default defineEventHandler(async (event) => {
 	await ensureDatabase();
@@ -38,6 +38,13 @@ export default defineEventHandler(async (event) => {
 
 	const oldPost = oldPosts[0];
 
+	if (post.slug !== oldPost?.slug && (await slugTaken(post.slug, post.id))) {
+		throw createError({
+			statusCode: 409,
+			statusMessage: `The slug "${post.slug}" is already in use — pick a different one`
+		});
+	}
+
 	const thumbnailString = post.thumbnail ? btoa(String.fromCharCode(...post.thumbnail)) : null;
 
 	await db
@@ -53,24 +60,10 @@ export default defineEventHandler(async (event) => {
 		})
 		.where(eq(blogPosts.id, post.id));
 
-	await kv.del('nuxtpress:blog_posts_list');
-	await kv.del('nuxtpress:blog_posts_list:v1');
-	await kv.del('nuxtpress:blog_posts_list:v2');
-	await kv.del('nuxtpress:feed_xml:v2');
-	await kv.del(`nuxtpress:slug_exists:${post.slug}`);
+	await invalidatePostCaches();
 
 	if (oldPost) {
-		const oldDate = new Date(oldPost.createdAt);
-		const y = oldDate.getUTCFullYear();
-		const m = oldDate.getUTCMonth() + 1;
-		const d = oldDate.getUTCDate();
-		for (const v of ['', 'v2:', 'v3:']) {
-			await kv.del(`nuxtpress:blog_post:${v}${oldPost.slug}:${y}:${m}:${d}`);
-			await kv.del(`nuxtpress:blog_post:${v}${post.slug}:${y}:${m}:${d}`);
-		}
-
-		if (oldPost.slug !== post.slug) {
-			await kv.del(`nuxtpress:slug_exists:${oldPost.slug}`);
-		}
+		await invalidatePost(oldPost.slug, oldPost.createdAt);
+		await invalidatePost(post.slug, oldPost.createdAt);
 	}
 });

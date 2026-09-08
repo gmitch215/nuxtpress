@@ -1,5 +1,6 @@
 import { kv } from 'hub:kv';
 import { requireAdmin } from '~/server/utils/auth';
+import { invalidatePostCaches, URL_STYLE_KV_KEY } from '~/server/utils/posts';
 
 export default defineEventHandler(async (event) => {
 	await requireAdmin(event);
@@ -22,6 +23,7 @@ export default defineEventHandler(async (event) => {
 		linkedin,
 		discord,
 		supportEmail,
+		urlStyle,
 		message
 	} = await readBody(event);
 
@@ -214,6 +216,19 @@ export default defineEventHandler(async (event) => {
 		await kv.set('nuxtpress:setting:support_email', supportEmail);
 	}
 
+	if (urlStyle !== undefined) {
+		if (urlStyle !== 'dated' && urlStyle !== 'slug') {
+			throw createError({
+				statusCode: 400,
+				statusMessage: 'URL style must be either "dated" or "slug"'
+			});
+		}
+
+		await kv.set(URL_STYLE_KV_KEY, urlStyle);
+		// the feed and sitemap embed post URLs, so both have to be rebuilt
+		await invalidatePostCaches();
+	}
+
 	if (message) {
 		if (message.text.length > 300) {
 			throw createError({
@@ -272,6 +287,7 @@ export default defineEventHandler(async (event) => {
 		linkedin: linkedin || config.public.linkedin,
 		discord: discord || config.public.discord,
 		supportEmail: supportEmail || config.public.supportEmail,
+		urlStyle: urlStyle || 'dated',
 		message: message || null
 	};
 });
