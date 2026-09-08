@@ -234,8 +234,7 @@ async function refreshPosts() {
 	refreshing.value = false;
 }
 
-onMounted(async () => {
-	await fetchPosts();
+onMounted(() => {
 	// Prefetch settings to avoid delay when opening settings modal
 	if (loggedIn.value) {
 		fetchSettings().catch(() => {});

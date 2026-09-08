@@ -1,46 +1,18 @@
-import type { BlogPost, BlogPostData } from '~/shared/types';
+import type { BlogPost, BlogPostData, BlogPostSummary } from '~/shared/types';
 
 export function useBlogPosts() {
-	const posts = useState<BlogPost[]>('blog-posts', () => []);
+	// fetched during SSR so post links are in the served HTML for crawlers and no-JS clients
+	const { data, refresh } = useAsyncData<BlogPostSummary[]>(
+		'blog-posts',
+		() => $fetch<BlogPostSummary[]>('/api/blog/list'),
+		{ default: () => [] }
+	);
+
+	const posts = computed(() => data.value ?? []);
 
 	const fetchPosts = async () => {
-		const res = await $fetch<BlogPost[]>('/api/blog/list', {
-			method: 'GET'
-		});
-
-		posts.value = res;
-		return res;
-	};
-
-	const usePost = (slug: string, date: { year: number; month: number; day: number }) => {
-		const post = useState<BlogPost | null>(
-			`blog-post-${slug}-${date.year}-${date.month}-${date.day}`,
-			() => null
-		);
-
-		const fetchPost = async (): Promise<BlogPost | null> => {
-			try {
-				const res = await $fetch<BlogPost>(
-					`/api/blog/find?slug=${slug}&year=${date.year}&month=${date.month}&day=${date.day}`,
-					{
-						method: 'GET'
-					}
-				);
-				post.value = res;
-				return res;
-			} catch (error) {
-				return null;
-			}
-		};
-
-		if (!post.value) {
-			fetchPost();
-		}
-
-		return {
-			post,
-			fetchPost
-		};
+		await refresh();
+		return posts.value;
 	};
 
 	const addPost = async (post: BlogPostData): Promise<BlogPost> => {
@@ -49,7 +21,7 @@ export function useBlogPosts() {
 			body: { post }
 		});
 
-		await fetchPosts();
+		await refresh();
 		return res;
 	};
 
@@ -59,7 +31,7 @@ export function useBlogPosts() {
 			body: { post }
 		});
 
-		await fetchPosts();
+		await refresh();
 		return res;
 	};
 
@@ -67,12 +39,11 @@ export function useBlogPosts() {
 		await $fetch(`/api/blog/remove?id=${id}`, {
 			method: 'DELETE'
 		});
-		await fetchPosts();
+		await refresh();
 	};
 
 	return {
 		posts,
-		usePost,
 		fetchPosts,
 		addPost,
 		updatePost,
@@ -80,48 +51,33 @@ export function useBlogPosts() {
 	};
 }
 
-export function useBlogPost(id: string) {
-	const { posts, fetchPosts } = useBlogPosts();
-
-	const post = computed(() => posts.value.find((p) => p.id === id) || null);
-
-	onMounted(async () => {
-		if (posts.value.length === 0) {
-			await fetchPosts();
-		}
-	});
-
-	return {
-		post
-	};
-}
+export type SettingsState = {
+	name?: string;
+	description?: string;
+	bio?: string;
+	author?: string;
+	themeColor?: string;
+	favicon?: string;
+	faviconPng?: string;
+	website?: string;
+	github?: string;
+	twitter?: string;
+	instagram?: string;
+	patreon?: string;
+	linkedin?: string;
+	discord?: string;
+	supportEmail?: string;
+	urlStyle?: 'dated' | 'slug';
+	message?: {
+		text: string;
+		icon?: string | null;
+		ttl: number;
+		type: 'success' | 'warning' | 'error' | 'info';
+		link?: string | null;
+	} | null;
+};
 
 export function useSettings() {
-	type SettingsState = {
-		name?: string;
-		description?: string;
-		bio?: string;
-		author?: string;
-		themeColor?: string;
-		favicon?: string;
-		faviconPng?: string;
-		website?: string;
-		github?: string;
-		twitter?: string;
-		instagram?: string;
-		patreon?: string;
-		linkedin?: string;
-		discord?: string;
-		supportEmail?: string;
-		message?: {
-			text: string;
-			icon?: string | null;
-			ttl: number;
-			type: 'success' | 'warning' | 'error' | 'info';
-			link?: string | null;
-		} | null;
-	};
-
 	const settings = useState<SettingsState>('blog-settings', () => ({}));
 
 	const fetchSettings = async () => {
@@ -132,16 +88,6 @@ export function useSettings() {
 		settings.value = res;
 		return res;
 	};
-
-	const initSettings = async () => {
-		if (Object.keys(settings.value).length === 0) {
-			await fetchSettings();
-		}
-	};
-
-	onMounted(async () => {
-		await initSettings();
-	});
 
 	return {
 		settings,

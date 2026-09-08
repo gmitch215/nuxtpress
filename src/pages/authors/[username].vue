@@ -36,14 +36,14 @@
 </template>
 
 <script setup lang="ts">
-import type { BlogPost, PublicUser } from '~/shared/types';
+import type { BlogPostSummary, PublicUser } from '~/shared/types';
 
 const route = useRoute();
 const username = computed(() => String(route.params.username || '').toLowerCase());
 
 const { data, error } = await useAsyncData(
 	() => `author:${username.value}`,
-	() => $fetch<{ author: PublicUser; posts: BlogPost[] }>(`/api/users/${username.value}`)
+	() => $fetch<{ author: PublicUser; posts: BlogPostSummary[] }>(`/api/users/${username.value}`)
 );
 
 if (error.value) {

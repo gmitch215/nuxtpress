@@ -14,11 +14,11 @@
 				</div>
 			</div>
 
-			<div v-if="filteredPosts.length > 0 && !loading">
+			<div v-if="filteredPosts.length > 0">
 				<BlogPostGroup :posts="filteredPosts" />
 			</div>
 			<div
-				v-else-if="!loading"
+				v-else
 				class="text-center py-20"
 			>
 				<p class="text-gray-500 dark:text-gray-400 text-lg">
@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-const { posts, fetchPosts } = useBlogPosts();
+const { posts } = useBlogPosts();
 const { settings } = useSettings();
 const config = useRuntimeConfig();
 const route = useRoute();
@@ -125,14 +125,5 @@ const filteredPosts = computed(() => {
 			postDate.getUTCDate() === day
 		);
 	});
-});
-
-const loading = ref(false);
-onMounted(async () => {
-	if (posts.value.length === 0) {
-		loading.value = true;
-		await fetchPosts();
-		loading.value = false;
-	}
 });
 </script>

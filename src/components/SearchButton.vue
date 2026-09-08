@@ -20,52 +20,58 @@
 </template>
 
 <script setup lang="ts">
-import { formatDate, type BlogPost } from '~/shared/types';
+import { formatDate, type BlogPostSummary } from '~/shared/types';
 
-const { settings } = useSettings();
-const config = useRuntimeConfig();
 const open = ref(false);
 const search = ref('');
+const debounced = ref('');
+const { urlFor } = usePostUrl();
 
-const { data: posts, status } = await useFetch<BlogPost[]>(`/api/blog/list`, {
+// client-only and query-scoped; SSR-fetching the whole list here put every post's full body into
+// the payload of every page that renders the navbar
+const {
+	data: posts,
+	status,
+	refresh
+} = useFetch<BlogPostSummary[]>('/api/blog/search', {
 	key: 'blog-posts-search',
-	lazy: true
+	query: { q: debounced },
+	server: false,
+	lazy: true,
+	immediate: false,
+	default: () => []
+});
+
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+watch(search, (value) => {
+	if (debounceTimer) clearTimeout(debounceTimer);
+	debounceTimer = setTimeout(() => {
+		debounced.value = value.trim();
+		if (debounced.value) refresh();
+	}, 200);
+});
+onBeforeUnmount(() => {
+	if (debounceTimer) clearTimeout(debounceTimer);
 });
 
 const groups = computed(() => [
 	{
 		id: 'posts',
-		label: search.value ? `Blog Posts matching "${search.value}"` : 'Blog Posts',
-		items:
-			posts.value
-				?.filter(
-					(post) =>
-						post.title.toLowerCase().includes(search.value.toLowerCase()) ||
-						// strip markdown, match content
-						post.content
-							.replace(/[#_*~`>-\[\]\(\)!]/g, '')
-							.toLowerCase()
-							.includes(search.value.toLowerCase())
-				)
-				.map((post) => ({
-					id: post.id,
-					label: post.title,
-					description: `by ${settings.value.author || config.public.author}`,
-					suffix: formatDate(post.created_at),
-					avatar: {
-						src: '/favicon.png',
-						alt: post.title
-					},
-					onSelect: (_: Event) => {
-						const date = new Date(post.created_at);
-						const year = date.getUTCFullYear();
-						const month = date.getUTCMonth() + 1;
-						const day = date.getUTCDate();
-
-						navigateTo(`/${year}/${month}/${day}/${post.slug}`);
-						open.value = false;
-					}
-				})) || []
+		label: debounced.value ? `Blog Posts matching "${debounced.value}"` : 'Blog Posts',
+		items: (posts.value ?? []).map((post) => ({
+			id: post.id,
+			label: post.title,
+			description: post.author?.displayName ? `by ${post.author.displayName}` : post.excerpt,
+			suffix: formatDate(post.created_at),
+			avatar: {
+				src: post.thumbnail_url || '/favicon.png',
+				alt: post.title
+			},
+			onSelect: (_: Event) => {
+				navigateTo(urlFor(post));
+				open.value = false;
+			}
+		}))
 	}
 ]);
 </script>

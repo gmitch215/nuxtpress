@@ -28,11 +28,11 @@
 				</div>
 			</div>
 
-			<div v-if="filteredPosts.length > 0 && !loading">
+			<div v-if="filteredPosts.length > 0">
 				<BlogPostGroup :posts="filteredPosts" />
 			</div>
 			<div
-				v-else-if="!loading"
+				v-else
 				class="text-center py-20"
 			>
 				<p class="text-gray-500 dark:text-gray-400 text-lg">No posts found for {{ year }}</p>
@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-const { posts, fetchPosts } = useBlogPosts();
+const { posts } = useBlogPosts();
 const route = useRoute();
 const { settings } = useSettings();
 const config = useRuntimeConfig();
@@ -91,15 +91,6 @@ const filteredPosts = computed(() => {
 		const postDate = new Date(post.created_at);
 		return postDate.getUTCFullYear() === year;
 	});
-});
-
-const loading = ref(false);
-onMounted(async () => {
-	if (posts.value.length === 0) {
-		loading.value = true;
-		await fetchPosts();
-		loading.value = false;
-	}
 });
 
 const monthNames = [
