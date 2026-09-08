@@ -71,6 +71,8 @@ const eventPrefix = (slug: string, day: string) =>
 const rollupKey = (day: string) => `analytics:rollup:${day}`;
 const monthlyKey = (month: string) => `analytics:mrollup:${month}`;
 const SLUG_INDEX_PREFIX = 'analytics:slug:';
+const LEGACY_SLUG_INDEX_KEY = 'analytics:slugs';
+const LEGACY_SLUG_INDEX_SUFFIX = 'slugs';
 
 function ymd(d: Date): string {
 	return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(
@@ -125,19 +127,34 @@ export async function recordSlug(slug: string) {
 }
 
 export async function getSlugs(): Promise<string[]> {
+	const slugs = new Set<string>();
+
 	try {
-		const keys = await kv.keys(SLUG_INDEX_PREFIX);
-		return keys.map((key) => {
+		for (const key of await kv.keys(SLUG_INDEX_PREFIX)) {
+			// the legacy index key sits alongside these markers; it is read separately below
+			if (key === LEGACY_SLUG_INDEX_KEY || key.endsWith(`:${LEGACY_SLUG_INDEX_SUFFIX}`)) continue;
 			const raw = key.slice(key.lastIndexOf(':') + 1);
 			try {
-				return decodeURIComponent(raw);
+				slugs.add(decodeURIComponent(raw));
 			} catch {
-				return raw;
+				slugs.add(raw);
 			}
-		});
-	} catch {
-		return [];
-	}
+		}
+	} catch {}
+
+	// pre-v1.4 installs kept every slug in one JSON array; without this their existing events
+	// would never be enumerated again and would sit in KV until their TTL expired
+	try {
+		const raw = await kv.get<string>(LEGACY_SLUG_INDEX_KEY);
+		const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+		if (Array.isArray(parsed)) {
+			for (const slug of parsed) {
+				if (typeof slug === 'string' && slug) slugs.add(slug);
+			}
+		}
+	} catch {}
+
+	return [...slugs];
 }
 
 export async function writeEvent(day: string, evt: RawEvent) {

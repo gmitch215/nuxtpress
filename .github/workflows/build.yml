@@ -24,6 +24,8 @@ jobs:
         run: bun run build
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Check Build Output
+        run: bun scripts/check-build-output.mjs
       # uncomment the following lines to enable deployment to Cloudflare Workers
       # - name: Deploy to Cloudflare Workers
       #   uses: cloudflare/wrangler-action@v3

@@ -1,6 +1,51 @@
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { expect, test } from '../fixtures';
 import { loginViaApi } from '../utils/auth';
 import { createPost, deletePost } from '../utils/posts';
+
+// the test lane runs the fs-lite kv driver, where a key maps to a file path with ':' as '/'
+const KV_DIR = join(process.env.NUXTPRESS_DATA_DIR || '.data', 'kv');
+const LEGACY_INDEX = join(KV_DIR, 'analytics', 'slugs');
+
+/** Writes an event in the pre-v1.4 shape: no vsid, and the slug listed in one JSON array. */
+async function seedLegacyEvent(slug: string, day: string) {
+	const dir = join(KV_DIR, 'analytics', 'evt', day, slug);
+	await mkdir(dir, { recursive: true });
+	await writeFile(
+		join(dir, 'legacyevent0000000000000000000000'),
+		JSON.stringify({
+			slug,
+			ts: Date.now(),
+			vid: 'legacyvisitor',
+			active: 4321,
+			depth: 50,
+			referrer: 'direct',
+			device: 'desktop',
+			browser: 'firefox',
+			isExit: true
+		})
+	);
+
+	let slugs: string[] = [];
+	try {
+		slugs = JSON.parse(await readFile(LEGACY_INDEX, 'utf8'));
+	} catch {
+		slugs = [];
+	}
+	if (!slugs.includes(slug)) slugs.push(slug);
+	await writeFile(LEGACY_INDEX, JSON.stringify(slugs));
+}
+
+async function unseedLegacyEvent(slug: string, day: string) {
+	await rm(join(KV_DIR, 'analytics', 'evt', day, slug), { recursive: true, force: true });
+	try {
+		const slugs: string[] = JSON.parse(await readFile(LEGACY_INDEX, 'utf8'));
+		await writeFile(LEGACY_INDEX, JSON.stringify(slugs.filter((s) => s !== slug)));
+	} catch {
+		// nothing to prune
+	}
+}
 
 const BEACON = {
 	kind: 'post' as const,
@@ -172,6 +217,26 @@ test.describe('analytics API', () => {
 		await loginViaApi(request);
 		const body = await (await request.get('/api/analytics/summary?range=7d')).json();
 		expect(body.topPosts.some((p: any) => p.slug === slug)).toBe(false);
+	});
+
+	test('events written by a pre-v1.4 install are still folded in', async ({ request }) => {
+		// pre-v1.4 kept every slug in one JSON array and wrote events without a vsid. The reader
+		// has to pick both up or an upgraded site's existing analytics stay orphaned until TTL.
+		const slug = `an-legacy-${Date.now()}`;
+		const day = new Date().toISOString().slice(0, 10);
+		await seedLegacyEvent(slug, day);
+
+		try {
+			await loginViaApi(request);
+			const body = await (await request.get('/api/analytics/summary?range=7d')).json();
+			const row = body.topPosts.find((p: any) => p.slug === slug);
+
+			expect(row, `legacy slug ${slug} was not folded in`).toBeTruthy();
+			expect(row.views).toBe(1);
+			expect(row.avgActiveMs).toBe(4321);
+		} finally {
+			await unseedLegacyEvent(slug, day);
+		}
 	});
 
 	test('the summary reports os, country and audience dimensions', async ({ request }) => {

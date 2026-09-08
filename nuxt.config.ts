@@ -110,7 +110,11 @@ export default defineNuxtConfig({
 	hub: {
 		dir: process.env.NUXTPRESS_DATA_DIR || '.data',
 		cache: true,
-		kv: { base: `${process.env.NUXTPRESS_DATA_DIR || '.data'}/kv` },
+		// `base` only means anything to the local fs-lite driver, but nuxthub defu-merges this
+		// object into whichever driver it picks. Passing it unconditionally reached the
+		// cloudflare-kv-binding config in production and prefixed every key with `.data/kv:`,
+		// which hid all existing settings and analytics. Only override it for a scoped test dir.
+		kv: process.env.NUXTPRESS_DATA_DIR ? { base: `${process.env.NUXTPRESS_DATA_DIR}/kv` } : true,
 		blob: true,
 		db: 'sqlite'
 	},

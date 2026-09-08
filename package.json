@@ -8,6 +8,7 @@
     "dev:test": "bunx nuxi dev --no-restart --public --port 8787 --dotenv .config/test.env",
     "dev:cloudflare": "bun run build && wrangler dev --local --port 8787",
     "build": "NODE_OPTIONS='--max-old-space-size=4096' nuxt build",
+    "build:check": "bun run build && bun scripts/check-build-output.mjs",
     "postinstall": "nuxt prepare",
     "prettier": "bunx prettier --write .",
     "prettier:check": "bunx prettier --check .",
