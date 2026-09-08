@@ -1,5 +1,5 @@
 import { expect, test } from '../fixtures';
-import { loginViaApi, resetAdminPassword } from '../utils/auth';
+import { loginViaApi, resetAdminPassword, TEST_ADMIN } from '../utils/auth';
 
 test.describe('admin users API', () => {
 	test('GET /api/admin/users requires admin', async ({ request }) => {
@@ -70,21 +70,25 @@ test.describe('admin users API', () => {
 		expect(res.status()).toBe(400);
 	});
 
-	test('admin password can be updated even while NUXT_PASSWORD is set', async ({ request }) => {
-		// genuinely targets the legacy admin: the NUXT_PASSWORD fallback only applies to `admin`.
-		// finally resets the seeded hash so a changed admin password can never leak into later specs.
+	test('an administrator can change the seeded admin password', async ({ request }) => {
+		const replacement = 'replaced-via-admin-api-pw';
 		try {
 			await loginViaApi(request);
 			const list = await (await request.get('/api/admin/users')).json();
 			const adminUser = list.find((u: any) => u.username === 'admin');
 			const res = await request.patch(`/api/admin/users/${adminUser.id}`, {
-				data: { password: 'replaced-via-admin-api-pw' }
+				data: { password: replacement }
 			});
 			expect(res.ok()).toBe(true);
-			// legacy NUXT_PASSWORD still works as a login fallback, so the seeded creds keep working
-			await loginViaApi(request);
+
+			// the stored hash is what authenticates; NUXT_PASSWORD is not a login fallback any more
+			await loginViaApi(request, { username: 'admin', password: replacement });
+			const stale = await request.post('/api/login', {
+				data: { username: 'admin', password: TEST_ADMIN.password }
+			});
+			expect(stale.status()).toBe(401);
 		} finally {
-			await resetAdminPassword(request);
+			await resetAdminPassword(request, replacement);
 		}
 	});
 

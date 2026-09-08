@@ -24,12 +24,37 @@ export async function loginContext(context: BrowserContext, creds = TEST_ADMIN):
 	if (!res.ok()) throw new Error(`context login failed: ${res.status()}`);
 }
 
-export async function resetAdminPassword(request: APIRequestContext): Promise<void> {
-	await loginViaApi(request);
-	const list = await (await request.get('/api/admin/users')).json();
-	const admin = list.find?.((u: { username: string }) => u.username === 'admin');
-	if (admin)
-		await request.patch(`/api/admin/users/${admin.id}`, {
-			data: { password: TEST_ADMIN.password }
+/**
+ * Puts the seeded admin password back. `currentPassword` is whatever a test just changed it to;
+ * there is no env-var fallback login any more, so recovery has to authenticate with the value
+ * that actually works right now or every later spec inherits a locked-out admin.
+ */
+export async function resetAdminPassword(
+	request: APIRequestContext,
+	currentPassword?: string
+): Promise<void> {
+	const candidates = [TEST_ADMIN.password, currentPassword].filter(
+		(pw): pw is string => typeof pw === 'string' && pw.length > 0
+	);
+
+	for (const password of candidates) {
+		const login = await request.post('/api/login', {
+			data: { username: TEST_ADMIN.username, password }
 		});
+		if (!login.ok()) continue;
+
+		if (password === TEST_ADMIN.password) return;
+
+		const list = await (await request.get('/api/admin/users')).json();
+		const admin = list.find?.((u: { username: string }) => u.username === 'admin');
+		if (admin) {
+			await request.patch(`/api/admin/users/${admin.id}`, {
+				data: { password: TEST_ADMIN.password }
+			});
+		}
+		await loginViaApi(request);
+		return;
+	}
+
+	throw new Error('could not restore the seeded admin password with any known credential');
 }

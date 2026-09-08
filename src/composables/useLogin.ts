@@ -4,14 +4,10 @@ export function useLogin() {
 	const user = computed(() => session.user.value);
 	const isAdmin = computed(() => user.value?.role === 'administrator');
 
-	const login = async (passwordOrCreds: string | { username: string; password: string }) => {
-		const body =
-			typeof passwordOrCreds === 'string'
-				? { username: 'admin', password: passwordOrCreds }
-				: passwordOrCreds;
+	const login = async (credentials: { username: string; password: string }) => {
 		const result = await $fetch<{ ok: boolean }>('/api/login', {
 			method: 'POST',
-			body,
+			body: credentials,
 			credentials: 'include'
 		});
 		if (result.ok) {

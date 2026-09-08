@@ -34,13 +34,27 @@ test.describe('auth API', () => {
 		expect(body.user?.role).toBe('administrator');
 	});
 
-	test('legacy password-only login body still works (defaults username to admin)', async ({
+	test('a password-only login body is refused now that the legacy fallback is gone', async ({
 		request
 	}) => {
 		const res = await request.post('/api/login', { data: { password: 'adminpass' } });
-		expect(res.ok()).toBe(true);
+		expect(res.status()).toBe(400);
 		const verify = await request.get('/api/verify');
-		expect((await verify.json()).user?.username).toBe('admin');
+		expect((await verify.json()).loggedIn).toBe(false);
+	});
+
+	test('the raw NUXT_PASSWORD value no longer authenticates on its own', async ({ request }) => {
+		// the seeded admin still has this as a real hashed password, so it has to be the
+		// stored hash that authorises the login rather than an env-var comparison
+		const good = await request.post('/api/login', {
+			data: { username: 'admin', password: 'adminpass' }
+		});
+		expect(good.ok()).toBe(true);
+
+		const wrongUser = await request.post('/api/login', {
+			data: { username: 'nobody-at-all', password: 'adminpass' }
+		});
+		expect(wrongUser.status()).toBe(401);
 	});
 
 	test('POST /api/logout clears session', async ({ request }) => {
