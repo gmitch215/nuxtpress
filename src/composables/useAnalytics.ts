@@ -1,16 +1,20 @@
 type TrackPayload = {
 	slug: string;
+	kind: 'post' | 'page';
+	vsid: string;
 	active: number;
 	depth: 0 | 25 | 50 | 75 | 100;
 	referrer: 'external' | 'internal' | 'direct';
-	prevSlug?: string;
+	referrerUrl?: string;
 	isExit: boolean;
 };
 
-function dntEnabled(): boolean {
+/** Respects Do Not Track and Global Privacy Control before anything is sent. */
+function optedOut(): boolean {
 	if (typeof navigator === 'undefined') return false;
-	const dnt = (navigator as any).doNotTrack || (window as any).doNotTrack;
-	return dnt === '1' || dnt === 'yes';
+	const nav = navigator as Navigator & { doNotTrack?: string; globalPrivacyControl?: boolean };
+	const dnt = nav.doNotTrack || (window as unknown as { doNotTrack?: string }).doNotTrack;
+	return dnt === '1' || dnt === 'yes' || nav.globalPrivacyControl === true;
 }
 
 function send(payload: TrackPayload) {
@@ -30,10 +34,11 @@ function send(payload: TrackPayload) {
 	} catch {}
 }
 
-export function useAnalytics(slug: () => string) {
+export function useAnalytics(slug: () => string, kind: 'post' | 'page' = 'post') {
 	if (!import.meta.client) return { start() {}, stop() {} };
 
 	let started = false;
+	let visitId = '';
 	let activeMs = 0;
 	let lastTickAt = 0;
 	let idleTimer: number | null = null;
@@ -53,9 +58,7 @@ export function useAnalytics(slug: () => string) {
 	function readReferrer(): 'external' | 'internal' | 'direct' {
 		try {
 			if (!document.referrer) return 'direct';
-			const ref = new URL(document.referrer);
-			if (ref.host === location.host) return 'internal';
-			return 'external';
+			return new URL(document.referrer).host === location.host ? 'internal' : 'external';
 		} catch {
 			return 'direct';
 		}
@@ -90,7 +93,8 @@ export function useAnalytics(slug: () => string) {
 		const doc = document.documentElement;
 		const totalScrollable = Math.max(1, doc.scrollHeight - window.innerHeight);
 		const scrolled = Math.min(totalScrollable, window.scrollY);
-		maxDepth = Math.max(maxDepth, depthFor((scrolled / totalScrollable) * 100));
+		const next = depthFor((scrolled / totalScrollable) * 100);
+		if (next > maxDepth) maxDepth = next;
 	}
 
 	let rafPending = false;
@@ -113,38 +117,22 @@ export function useAnalytics(slug: () => string) {
 		resetIdle();
 	}
 
+	// active time and depth are reported cumulatively per visit, so the server can fold a
+	// visit's beacons with max() instead of counting every heartbeat as another view
 	function flush(isExit: boolean) {
 		tick();
 		const cur = slug();
 		if (!cur) return;
-		const payload: TrackPayload = {
+		send({
 			slug: cur,
+			kind,
+			vsid: visitId,
 			active: Math.round(activeMs),
 			depth: maxDepth,
 			referrer: readReferrer(),
+			referrerUrl: document.referrer || undefined,
 			isExit
-		};
-		send(payload);
-		activeMs = 0;
-	}
-
-	function start() {
-		if (started || dntEnabled()) return;
-		started = true;
-		visible = document.visibilityState === 'visible';
-		if (visible) resetIdle();
-		readDepth();
-		window.addEventListener('scroll', onScroll, { passive: true });
-		window.addEventListener('keydown', onActivity, { passive: true });
-		window.addEventListener('mousemove', onActivity, { passive: true });
-		document.addEventListener('visibilitychange', onVisibility);
-		window.addEventListener('pagehide', onPageHide);
-		window.addEventListener('beforeunload', onBeforeUnload);
-		heartbeat = window.setInterval(() => {
-			if (unloaded) return;
-			tick();
-			if (activeMs > 0) flush(false);
-		}, 15000);
+		});
 	}
 
 	function onPageHide() {
@@ -159,6 +147,29 @@ export function useAnalytics(slug: () => string) {
 		flush(true);
 	}
 
+	function start() {
+		if (started || optedOut()) return;
+		started = true;
+		unloaded = false;
+		visitId = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+		visible = document.visibilityState === 'visible';
+		if (visible) resetIdle();
+		readDepth();
+		// a view counts on arrival; waiting for the heartbeat lost every short visit
+		flush(false);
+		window.addEventListener('scroll', onScroll, { passive: true });
+		window.addEventListener('keydown', onActivity, { passive: true });
+		window.addEventListener('mousemove', onActivity, { passive: true });
+		document.addEventListener('visibilitychange', onVisibility);
+		window.addEventListener('pagehide', onPageHide);
+		window.addEventListener('beforeunload', onBeforeUnload);
+		heartbeat = window.setInterval(() => {
+			if (unloaded) return;
+			tick();
+			if (activeMs > 0) flush(false);
+		}, 30000);
+	}
+
 	function stop() {
 		if (!started) return;
 		if (heartbeat) clearInterval(heartbeat);
@@ -171,6 +182,9 @@ export function useAnalytics(slug: () => string) {
 		window.removeEventListener('beforeunload', onBeforeUnload);
 		if (!unloaded) flush(true);
 		started = false;
+		maxDepth = 0;
+		activeMs = 0;
+		visitId = '';
 	}
 
 	return { start, stop };

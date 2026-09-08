@@ -46,7 +46,7 @@
 		</div>
 
 		<section class="rounded border border-default p-3">
-			<h3 class="text-sm font-medium mb-2">Views over time</h3>
+			<h3 class="text-sm font-medium mb-2">Views Over Time</h3>
 			<div
 				v-if="pending"
 				class="h-40"
@@ -67,54 +67,67 @@
 		</section>
 
 		<section class="rounded border border-default p-3">
-			<h3 class="text-sm font-medium mb-2">Top posts</h3>
+			<h3 class="text-sm font-medium mb-2">Audience</h3>
 			<div
 				v-if="pending"
-				class="h-32"
+				class="h-10"
 			>
 				<USkeleton class="h-full w-full" />
 			</div>
 			<div
-				v-else-if="!data || data.topPosts.length === 0"
-				class="text-muted text-center py-6 text-sm"
+				v-else-if="!data || audienceTotal === 0"
+				class="text-muted text-xs"
 			>
-				No posts tracked yet.
+				No data.
 			</div>
 			<div
 				v-else
-				class="overflow-x-auto"
+				class="flex flex-wrap gap-6 text-sm"
 			>
-				<table class="min-w-full text-sm">
-					<thead class="text-left text-muted">
-						<tr>
-							<th class="p-2">Post</th>
-							<th class="p-2">Views</th>
-							<th class="p-2">Unique</th>
-							<th class="p-2">Avg read</th>
-							<th class="p-2">Completion</th>
-						</tr>
-					</thead>
-					<tbody>
-						<tr
-							v-for="row in data.topPosts"
-							:key="row.slug"
-							class="border-t border-default"
-						>
-							<td class="p-2 max-w-xs truncate">{{ row.title }}</td>
-							<td class="p-2">{{ row.views }}</td>
-							<td class="p-2">{{ row.unique }}</td>
-							<td class="p-2">{{ formatMs(row.avgActiveMs) }}</td>
-							<td class="p-2">{{ formatPercent(row.completionRate) }}</td>
-						</tr>
-					</tbody>
-				</table>
+				<div>
+					<span class="text-muted">Anonymous</span>
+					<span class="ml-2 tabular-nums font-medium">
+						{{ data.audience.anonymous }} ({{ anonymousPct }}%)
+					</span>
+				</div>
+				<div>
+					<span class="text-muted">Signed In</span>
+					<span class="ml-2 tabular-nums font-medium">
+						{{ data.audience.loggedIn }} ({{ loggedInPct }}%)
+					</span>
+				</div>
 			</div>
 		</section>
+
+		<AnalyticsTopTable
+			title="Top Posts"
+			empty="No posts tracked yet."
+			:rows="data?.topPosts ?? []"
+			:loading="pending"
+		/>
+
+		<AnalyticsTopTable
+			title="Top Pages"
+			empty="No other pages tracked yet."
+			column-label="Page"
+			:rows="data?.topPages ?? []"
+			:loading="pending"
+		/>
 
 		<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
 			<BreakdownCard
 				title="Referrers"
-				:counts="data?.refs ?? {}"
+				:counts="data?.refHosts ?? {}"
+				:loading="pending"
+			/>
+			<BreakdownCard
+				title="Countries"
+				:counts="data?.countries ?? {}"
+				:loading="pending"
+			/>
+			<BreakdownCard
+				title="Operating Systems"
+				:counts="data?.os ?? {}"
 				:loading="pending"
 			/>
 			<BreakdownCard
@@ -127,11 +140,31 @@
 				:counts="data?.browsers ?? {}"
 				:loading="pending"
 			/>
+			<BreakdownCard
+				title="Referrer Type"
+				:counts="data?.refs ?? {}"
+				:loading="pending"
+			/>
 		</div>
+
+		<p class="text-muted text-xs">
+			Visitors are counted with a daily-rotating salted hash of IP and user agent. No IP addresses,
+			user agents, user accounts or locations finer than country are stored, and Do Not Track and
+			Global Privacy Control are honored.
+		</p>
 	</div>
 </template>
 
 <script setup lang="ts">
+type TopRow = {
+	slug: string;
+	title: string;
+	views: number;
+	unique: number;
+	avgActiveMs: number;
+	completionRate: number;
+};
+
 type Summary = {
 	range: string;
 	from: string;
@@ -143,17 +176,15 @@ type Summary = {
 		completionRate: { value: number; prev: number };
 	};
 	perDay: { day: string; views: number; unique: number }[];
-	topPosts: {
-		slug: string;
-		title: string;
-		views: number;
-		unique: number;
-		avgActiveMs: number;
-		completionRate: number;
-	}[];
+	topPosts: TopRow[];
+	topPages: TopRow[];
 	refs: Record<string, number>;
+	refHosts: Record<string, number>;
 	devices: Record<string, number>;
 	browsers: Record<string, number>;
+	os: Record<string, number>;
+	countries: Record<string, number>;
+	audience: { loggedIn: number; anonymous: number; loggedInRate: number };
 };
 
 const range = ref<'7d' | '30d' | '90d' | 'all'>('7d');
@@ -173,16 +204,9 @@ const { data, pending, refresh } = useFetch<Summary>(
 	}
 );
 
-function formatMs(ms: number) {
-	if (!ms) return '0s';
-	if (ms < 1000) return `${ms}ms`;
-	const s = Math.round(ms / 1000);
-	if (s < 60) return `${s}s`;
-	const m = Math.floor(s / 60);
-	return `${m}m ${s % 60}s`;
-}
-
-function formatPercent(v: number) {
-	return `${Math.round(v * 100)}%`;
-}
+const audienceTotal = computed(
+	() => (data.value?.audience.anonymous ?? 0) + (data.value?.audience.loggedIn ?? 0)
+);
+const loggedInPct = computed(() => Math.round((data.value?.audience.loggedInRate ?? 0) * 100));
+const anonymousPct = computed(() => 100 - loggedInPct.value);
 </script>

@@ -1,7 +1,15 @@
 import { kv } from 'hub:kv';
 import { z } from 'zod';
 import { recordSlug, todayUTC, writeEvent } from '~/server/utils/analytics';
-import { classifyBrowser, classifyDevice, isBotUA, visitorId } from '~/server/utils/ua';
+import {
+	classifyBrowser,
+	classifyCountry,
+	classifyDevice,
+	classifyOs,
+	isBotUA,
+	referrerHost,
+	visitorId
+} from '~/server/utils/ua';
 
 const trackSchema = z.object({
 	slug: z
@@ -9,13 +17,21 @@ const trackSchema = z.object({
 		.min(1)
 		.max(220)
 		.regex(/^[a-z0-9._\-/:]+$/i),
+	kind: z.enum(['post', 'page']).default('post'),
+	vsid: z
+		.string()
+		.min(1)
+		.max(64)
+		.regex(/^[a-z0-9_-]+$/i)
+		.optional()
+		.default(() => crypto.randomUUID().replace(/-/g, '').slice(0, 16)),
 	active: z
 		.number()
 		.min(0)
 		.max(60 * 60 * 1000),
 	depth: z.union([z.literal(0), z.literal(25), z.literal(50), z.literal(75), z.literal(100)]),
 	referrer: z.enum(['external', 'internal', 'direct']),
-	prevSlug: z.string().max(220).optional(),
+	referrerUrl: z.string().max(2048).optional(),
 	isExit: z.boolean()
 });
 
@@ -30,7 +46,11 @@ export default defineEventHandler(async (event) => {
 	const ua = getRequestHeader(event, 'user-agent') || '';
 	const purpose =
 		getRequestHeader(event, 'sec-purpose') || getRequestHeader(event, 'purpose') || '';
-	if (isBotUA(ua) || /prefetch/i.test(purpose)) {
+	const dnt = getRequestHeader(event, 'dnt') || '';
+	const gpc = getRequestHeader(event, 'sec-gpc') || '';
+
+	// honour the opt-out signals server-side too, not just in the beacon
+	if (dnt === '1' || gpc === '1' || isBotUA(ua) || /prefetch/i.test(purpose)) {
 		setResponseStatus(event, 204);
 		return null;
 	}
@@ -42,7 +62,8 @@ export default defineEventHandler(async (event) => {
 		getRequestHeader(event, 'x-forwarded-for') ||
 		'';
 	const salt = useRuntimeConfig().analyticsSalt || 'dev-salt';
-	const vid = await visitorId(String(ip).split(',')[0]?.trim(), ua, salt, day);
+	// daily-rotating salted hash; the raw ip and ua are never stored
+	const vid = await visitorId(String(ip).split(',')[0]?.trim() || '', ua, salt, day);
 
 	// per-visitor rate limit: 80 events per 60s
 	try {
@@ -55,16 +76,24 @@ export default defineEventHandler(async (event) => {
 		await kv.set(rlKey, cur + 1, { ttl: 60 });
 	} catch {}
 
+	const session = await getUserSession(event).catch(() => null);
+	const host = getRequestHost(event, { xForwardedHost: true }) || '';
+
 	await writeEvent(day, {
 		slug: parsed.data.slug,
+		kind: parsed.data.kind,
+		vsid: parsed.data.vsid,
 		ts: Date.now(),
 		vid,
 		active: Math.floor(parsed.data.active),
 		depth: parsed.data.depth,
 		referrer: parsed.data.referrer,
-		prevSlug: parsed.data.prevSlug,
+		refHost: referrerHost(parsed.data.referrerUrl, host),
 		device: classifyDevice(ua),
 		browser: classifyBrowser(ua),
+		os: classifyOs(ua),
+		country: classifyCountry(getRequestHeader(event, 'cf-ipcountry')),
+		loggedIn: Boolean(session?.user),
 		isExit: parsed.data.isExit
 	});
 
