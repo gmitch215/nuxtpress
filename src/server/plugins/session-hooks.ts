@@ -22,8 +22,10 @@ export default defineNitroPlugin(() => {
 			return;
 		}
 
-		// only invalidate when isActive is explicitly false/0; tolerate drizzle adapter quirks
-		const deactivated = fresh.isActive === false || fresh.isActive === 0 || fresh.isActive === null;
+		// the column is boolean-mode but d1 and libsql each hand it back differently, so compare
+		// against every falsy representation rather than trusting the declared type
+		const isActive = fresh.isActive as boolean | number | null;
+		const deactivated = isActive === false || isActive === 0 || isActive === null;
 		if (deactivated) {
 			await clearUserSession(event);
 			return;
