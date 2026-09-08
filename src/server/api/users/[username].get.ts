@@ -2,7 +2,8 @@ import { and, desc, eq } from 'drizzle-orm';
 import { db } from 'hub:db';
 import { blogPosts, users } from '~/server/db/schema';
 import { ensureDatabase } from '~/server/utils/db';
-import type { BlogPost, PublicUser } from '~/shared/types';
+import { excerptOf, parseTags } from '~/server/utils/posts';
+import type { BlogPostSummary, PublicUser } from '~/shared/types';
 
 export default defineEventHandler(async (event) => {
 	await ensureDatabase();
@@ -42,18 +43,20 @@ export default defineEventHandler(async (event) => {
 	const mapped = posts.map(
 		(row) =>
 			({
-				...row,
+				id: row.id,
+				title: row.title,
+				slug: row.slug,
+				excerpt: excerptOf(row.content),
+				thumbnail_url: row.thumbnailUrl || (row.thumbnail ? `/thumbnails/${row.id}` : undefined),
 				created_at: new Date(row.createdAt),
 				updated_at: new Date(row.updatedAt),
-				thumbnail: row.thumbnail
-					? Uint8Array.from(atob(row.thumbnail), (c) => c.charCodeAt(0))
-					: undefined,
-				thumbnail_url: row.thumbnailUrl || undefined,
-				tags: row.tags ? row.tags.split(',').map((t) => t.trim()) : [],
+				tags: parseTags(row.tags),
 				author_id: row.authorId,
 				author: authorPublic
-			}) satisfies BlogPost
-	) as BlogPost[];
+			}) satisfies BlogPostSummary
+	);
+
+	setHeader(event, 'Cache-Control', 'public, max-age=60');
 
 	return {
 		author: authorPublic,
