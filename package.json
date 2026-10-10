@@ -23,7 +23,7 @@
     "typescript": "^5.9.3 || ^6.0.0 || ^7.0.0"
   },
   "dependencies": {
-    "@cloudflare/workers-types": "^4.20260702.1",
+    "@cloudflare/workers-types": "^5.0.0",
     "@libsql/client": "^0.17.4",
     "@nuxt/icon": "^2.5.1",
     "@nuxt/image": "^2.1.0",
