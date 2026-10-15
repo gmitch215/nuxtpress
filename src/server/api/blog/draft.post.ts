@@ -1,10 +1,11 @@
 import { kv } from 'hub:kv';
 import { requireAuthed } from '~/server/utils/auth';
+import { DRAFT_TTL, draftAccess, draftKey, readDraft } from '~/server/utils/drafts';
 import { blogPostCreateSchema } from '~/shared/schemas';
 import type { BlogPostData } from '~/shared/types';
 
 export default defineEventHandler(async (event) => {
-	await requireAuthed(event);
+	const me = await requireAuthed(event);
 	await ensureDatabase();
 
 	const { post } = await readBody<{
@@ -34,9 +35,19 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	await kv.set(`nuxtpress:blog_draft:${post.slug}`, JSON.stringify(post), {
-		ttl: 60 * 60 * 24 * 7
-	}); // 7 days TTL
+	// the key stays one namespace, so overwriting is gated on who saved the draft last
+	const existing = await readDraft(post.slug);
+	if (existing && !(await draftAccess(me)(existing))) {
+		throw createError({
+			statusCode: 403,
+			statusMessage: 'Another author already has a draft with this slug'
+		});
+	}
+
+	// the owner always comes from the session, never from the body
+	await kv.set(draftKey(post.slug), JSON.stringify({ ...post, authorId: me.id }), {
+		ttl: DRAFT_TTL
+	});
 
 	return { success: true };
 });
