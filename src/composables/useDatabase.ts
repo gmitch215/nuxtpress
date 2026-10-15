@@ -15,10 +15,13 @@ export function useBlogPosts() {
 		return posts.value;
 	};
 
-	const addPost = async (post: BlogPostData): Promise<BlogPost> => {
-		const res = await $fetch<BlogPost>('/api/blog/create', {
+	const addPost = async (
+		post: BlogPostData,
+		notify = false
+	): Promise<BlogPost & { queued?: number }> => {
+		const res = await $fetch<BlogPost & { queued?: number }>('/api/blog/create', {
 			method: 'POST',
-			body: { post }
+			body: { post, notify }
 		});
 
 		await refresh();
@@ -68,6 +71,8 @@ export type SettingsState = {
 	discord?: string;
 	supportEmail?: string;
 	urlStyle?: 'dated' | 'slug';
+	subscriptions?: boolean;
+	media?: boolean;
 	message?: {
 		text: string;
 		icon?: string | null;

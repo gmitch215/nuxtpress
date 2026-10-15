@@ -1,7 +1,11 @@
 import { blogPosts } from '~/server/db/schema';
 import { requireAuthed } from '~/server/utils/auth';
 import { ensureDatabase } from '~/server/utils/db';
+import { cloudflareEnv, mailActive } from '~/server/utils/mail';
+import { resolveMedia } from '~/server/utils/media';
 import { invalidatePost, invalidatePostCaches, slugTaken } from '~/server/utils/posts';
+import { enqueuePost, subscriberCounts } from '~/server/utils/subscribers';
+import { contentFromMedia } from '~/shared/media';
 import { blogPostCreateSchema } from '~/shared/schemas';
 import type { BlogPost, BlogPostData } from '~/shared/types';
 
@@ -9,7 +13,7 @@ export default defineEventHandler(async (event) => {
 	const user = await requireAuthed(event);
 	await ensureDatabase();
 
-	const { post } = await readBody<{ post: BlogPostData }>(event);
+	const { post, notify } = await readBody<{ post: BlogPostData; notify?: boolean }>(event);
 
 	if (!post) {
 		throw createError({ statusCode: 400, statusMessage: 'No post object provided' });
@@ -23,6 +27,14 @@ export default defineEventHandler(async (event) => {
 			data: validation.error.issues
 		});
 	}
+
+	const data = validation.data;
+	const media = await resolveMedia(data.type, data.media, data.thumbnail_url, {
+		id: user.id,
+		isAdmin: user.role === 'administrator',
+		existing: new Set()
+	});
+	const content = data.type === 'slideshow' ? contentFromMedia(media) : data.content;
 
 	// slugs address a post on their own now, so they have to be unique across all dates
 	if (await slugTaken(post.slug)) {
@@ -41,7 +53,9 @@ export default defineEventHandler(async (event) => {
 		id,
 		title: post.title,
 		slug: post.slug,
-		content: post.content,
+		type: data.type,
+		media: data.type === 'article' ? null : JSON.stringify(media),
+		content,
 		thumbnail: thumbnailString,
 		thumbnailUrl: post.thumbnail_url || null,
 		tags: tagsString,
@@ -53,9 +67,19 @@ export default defineEventHandler(async (event) => {
 	await invalidatePostCaches();
 	await invalidatePost(post.slug, now);
 
+	let queued: number | undefined;
+	if (notify === true && (await mailActive(cloudflareEnv(event)))) {
+		await enqueuePost(id);
+		queued = (await subscriberCounts()).active;
+	}
+
 	return {
 		id,
 		...post,
+		type: data.type,
+		media,
+		content,
+		...(queued !== undefined ? { queued } : {}),
 		created_at: now,
 		updated_at: now,
 		author_id: user.id

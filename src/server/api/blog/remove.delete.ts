@@ -2,7 +2,8 @@ import { eq } from 'drizzle-orm';
 import { blogPosts } from '~/server/db/schema';
 import { requireOwnerOrAdmin } from '~/server/utils/auth';
 import { ensureDatabase } from '~/server/utils/db';
-import { invalidatePost, invalidatePostCaches } from '~/server/utils/posts';
+import { deleteMedia, keysOf } from '~/server/utils/media';
+import { invalidatePost, invalidatePostCaches, parseMedia } from '~/server/utils/posts';
 
 export default defineEventHandler(async (event) => {
 	await ensureDatabase();
@@ -15,7 +16,12 @@ export default defineEventHandler(async (event) => {
 	await requireOwnerOrAdmin(event, id);
 
 	const posts = await db
-		.select({ slug: blogPosts.slug, createdAt: blogPosts.createdAt })
+		.select({
+			slug: blogPosts.slug,
+			createdAt: blogPosts.createdAt,
+			media: blogPosts.media,
+			thumbnailUrl: blogPosts.thumbnailUrl
+		})
 		.from(blogPosts)
 		.where(eq(blogPosts.id, id))
 		.limit(1);
@@ -23,6 +29,7 @@ export default defineEventHandler(async (event) => {
 	const post = posts[0];
 
 	await db.delete(blogPosts).where(eq(blogPosts.id, id));
+	if (post) await deleteMedia(keysOf(parseMedia(post.media), post.thumbnailUrl));
 
 	await invalidatePostCaches();
 

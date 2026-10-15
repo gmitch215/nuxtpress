@@ -42,13 +42,62 @@
 		</UFormField>
 
 		<UFormField
+			v-if="state.type === 'article'"
 			label="Content"
 			name="content"
 			class="w-full"
 			required
 		>
-			<BlogFormContent v-model="state.content" />
+			<BlogFormContent
+				:key="editorKey"
+				v-model="state.content"
+			/>
 		</UFormField>
+		<UFormField
+			v-else-if="state.type === 'slideshow'"
+			label="Slides"
+			name="media"
+			class="w-full"
+			required
+			help="Each slide is an image with an optional caption"
+		>
+			<MediaSlideshowEditor
+				:key="editorKey"
+				v-model="state.media"
+				v-model:busy="mediaBusy"
+			/>
+		</UFormField>
+		<template v-else>
+			<UFormField
+				:label="state.type === 'video' ? 'Video' : 'Music'"
+				name="media"
+				class="w-full"
+				required
+			>
+				<MediaFileEditor
+					:key="editorKey"
+					v-model="fileMedia"
+					v-model:busy="mediaBusy"
+					:kind="state.type"
+					:poster="state.thumbnail_url || undefined"
+					@poster-captured="onPoster"
+				/>
+			</UFormField>
+			<UFormField
+				label="Caption"
+				name="content"
+				class="w-full"
+				help="Optional. Shown under the player."
+			>
+				<UTextarea
+					v-model="state.content"
+					:rows="3"
+					:maxlength="MAX_MEDIA_CAPTION"
+					class="w-full"
+					:disabled="loading"
+				/>
+			</UFormField>
+		</template>
 		<UFormField
 			label="Thumbnail"
 			name="thumbnail_url"
@@ -136,91 +185,136 @@
 			</div>
 		</UFormField>
 
-		<div class="flex gap-2 justify-end">
-			<UButton
-				color="neutral"
-				variant="outline"
-				:disabled="loading"
-				@click="handleCancel"
-			>
-				Cancel
-			</UButton>
-			<UPopover
-				v-model:open="popoverOpen"
-				dismissible
+		<UCheckbox
+			v-if="mode !== 'edit' && settings.subscriptions"
+			v-model="notifySubscribers"
+			label="Email Subscribers"
+			description="Queue this post for everyone subscribed by email"
+		/>
+
+		<div class="flex flex-wrap items-center justify-between gap-2">
+			<div
+				v-if="mode !== 'edit' && settings.media"
+				class="flex flex-wrap gap-1"
+				role="group"
+				aria-label="Post Type"
 			>
 				<UButton
-					icon="mdi:content-save-cog"
-					color="neutral"
-					:disabled="loading"
-					:loading="loadingDraft"
-					@click="handleDrafts"
+					v-for="option in typeOptions"
+					:key="option.value"
+					:icon="option.icon"
+					:color="state.type === option.value ? 'primary' : 'neutral'"
+					:variant="state.type === option.value ? 'solid' : 'outline'"
+					:aria-pressed="state.type === option.value"
+					:disabled="loading || mediaBusy"
+					@click="switchMode(option.value)"
 				>
-					Load Draft
+					{{ option.label }}
 				</UButton>
+			</div>
+			<UBadge
+				v-else-if="state.type !== 'article'"
+				:icon="POST_TYPE_ICONS[state.type]"
+				variant="subtle"
+				size="lg"
+			>
+				{{ POST_TYPE_LABELS[state.type] }}
+			</UBadge>
+			<span v-else />
+			<div class="flex flex-wrap gap-2 justify-end">
+				<UButton
+					color="neutral"
+					variant="outline"
+					:disabled="loading"
+					@click="handleCancel"
+				>
+					Cancel
+				</UButton>
+				<UPopover
+					v-model:open="popoverOpen"
+					dismissible
+				>
+					<UButton
+						icon="mdi:content-save-cog"
+						color="neutral"
+						:disabled="loading"
+						:loading="loadingDraft"
+						@click="handleDrafts"
+					>
+						Load Draft
+					</UButton>
 
-				<template #content="{ close }">
-					<div class="p-4 max-h-96 overflow-y-auto min-w-64">
-						<h3 class="text-lg font-semibold mb-2">Available Drafts</h3>
-						<div
-							v-if="!drafts || drafts.length === 0"
-							class="text-gray-500 text-center py-4"
-						>
-							No drafts found
-						</div>
-						<div
-							v-else
-							class="space-y-2"
-						>
+					<template #content="{ close }">
+						<div class="p-4 max-h-96 overflow-y-auto min-w-64">
+							<h3 class="text-lg font-semibold mb-2">Available Drafts</h3>
 							<div
-								v-for="draft in drafts"
-								:key="draft.slug"
-								class="p-2 border rounded hover:opacity-70 cursor-pointer transition-opacity"
-								@mouseenter="previewDraft(draft)"
-								@click="
-									() => {
-										loadDraft(draft);
-										close();
-									}
-								"
+								v-if="!drafts || drafts.length === 0"
+								class="text-gray-500 text-center py-4"
 							>
-								<div class="font-medium">
-									{{ draft.title || draft.slug }}
-								</div>
+								No drafts found
+							</div>
+							<div
+								v-else
+								class="space-y-2"
+							>
 								<div
-									v-if="draft.title && draft.slug"
-									class="text-sm text-gray-500"
+									v-for="draft in drafts"
+									:key="draft.slug"
+									class="p-2 border rounded hover:opacity-70 cursor-pointer transition-opacity"
+									@mouseenter="previewDraft(draft)"
+									@click="
+										() => {
+											loadDraft(draft);
+											close();
+										}
+									"
 								>
-									{{ draft.slug }}
+									<div class="font-medium">
+										{{ draft.title || draft.slug }}
+									</div>
+									<div
+										v-if="draft.title && draft.slug"
+										class="text-sm text-gray-500"
+									>
+										{{ draft.slug }}
+									</div>
 								</div>
 							</div>
 						</div>
-					</div>
-				</template>
-			</UPopover>
-			<UButton
-				icon="mdi:content-save-edit"
-				color="secondary"
-				:disabled="loading || !state.slug"
-				:loading="savingDraft"
-				@click="handleSave"
-			>
-				Save Draft
-			</UButton>
-			<UButton
-				type="submit"
-				icon="mdi:content-save"
-				:loading="loading"
-				:disabled="loading || !state.slug || state.content.length < 50"
-			>
-				{{ mode === 'edit' ? 'Update Post' : 'Create Post' }}
-			</UButton>
+					</template>
+				</UPopover>
+				<UButton
+					icon="mdi:content-save-edit"
+					color="secondary"
+					:disabled="loading || !state.slug"
+					:loading="savingDraft"
+					@click="handleSave"
+				>
+					Save Draft
+				</UButton>
+				<UButton
+					type="submit"
+					icon="mdi:content-save"
+					:loading="loading"
+					:disabled="loading || mediaBusy || !state.slug || !canSubmit"
+				>
+					{{ mode === 'edit' ? 'Update Post' : 'Create Post' }}
+				</UButton>
+			</div>
 		</div>
 	</UForm>
 </template>
 
 <script setup lang="ts">
 import type { FormSubmitEvent } from '#ui/types';
+import {
+	MAX_MEDIA_CAPTION,
+	POST_TYPE_ICONS,
+	POST_TYPE_LABELS,
+	POST_TYPES,
+	type MediaItem,
+	type PostType
+} from '~/shared/media';
 import { blogPostSchema, type BlogPostInput } from '~/shared/schemas';
 
 const props = defineProps<{
@@ -235,15 +329,85 @@ const emit = defineEmits<{
 }>();
 
 const { addPost, updatePost } = useBlogPosts();
+const { settings } = useSettings();
+const notifySubscribers = ref(true);
 const { drafts, fetchDrafts, saveDraft } = useDrafts();
 
 const state = reactive<BlogPostInput>({
 	title: props.initialData?.title || '',
 	slug: props.initialData?.slug || '',
+	type: props.initialData?.type || 'article',
+	media: props.initialData?.media ? [...props.initialData.media] : [],
 	content: props.initialData?.content || '',
 	thumbnail_url: props.initialData?.thumbnail_url || '',
 	tags: props.initialData?.tags || []
 });
+
+const typeOptions = POST_TYPES.map((value) => ({
+	value,
+	label: POST_TYPE_LABELS[value],
+	icon: POST_TYPE_ICONS[value]
+}));
+
+const store = reactive<Record<PostType, { content: string; media: MediaItem[] }>>({
+	article: { content: '', media: [] },
+	slideshow: { content: '', media: [] },
+	video: { content: '', media: [] },
+	music: { content: '', media: [] }
+});
+const mediaBusy = ref(false);
+const editorKey = ref(0);
+
+const fileMedia = computed<MediaItem | null>({
+	get: () => state.media[0] ?? null,
+	set: (item) => {
+		state.media = item ? [item] : [];
+	}
+});
+
+const canSubmit = computed(() => {
+	if (state.type === 'article') return state.content.length >= 50;
+	if (state.type === 'slideshow') return state.media.length >= 1;
+	return state.media.length === 1;
+});
+
+function switchMode(next: PostType) {
+	if (next === state.type || props.mode === 'edit') return;
+	store[state.type] = { content: state.content, media: [...state.media] };
+	Object.assign(state, { type: next, ...store[next], media: [...store[next].media] });
+	editorKey.value++;
+}
+
+const autoPoster = ref('');
+watch(
+	() => state.thumbnail_url,
+	(value) => {
+		if (value !== autoPoster.value) autoPoster.value = '';
+	}
+);
+
+function onPoster(url: string | null) {
+	if (url && (!state.thumbnail_url || autoPoster.value)) {
+		autoPoster.value = url;
+		state.thumbnail_url = url;
+	} else if (!url && autoPoster.value && state.thumbnail_url === autoPoster.value) {
+		state.thumbnail_url = '';
+		autoPoster.value = '';
+	}
+}
+
+function applyPost(post: Partial<BlogPostInput>) {
+	Object.assign(state, {
+		title: post.title || '',
+		slug: post.slug || '',
+		type: post.type || 'article',
+		media: post.media ? [...post.media] : [],
+		content: post.content || '',
+		thumbnail_url: post.thumbnail_url || '',
+		tags: post.tags || []
+	});
+	editorKey.value++;
+}
 
 const previousState = ref<BlogPostInput | null>(null);
 
@@ -284,18 +448,18 @@ watch(
 );
 
 watch(thumbnailFile, async (file) => {
-	if (file) {
-		const reader = new FileReader();
-
-		reader.onload = (e) => {
-			const result = e.target?.result as string;
-			thumbnailPreview.value = result;
-			state.thumbnail_url = result;
-		};
-
-		reader.readAsDataURL(file);
-	} else {
+	if (!file) {
 		thumbnailPreview.value = null;
+		return;
+	}
+
+	try {
+		const result = await fileToInlineImage(file, { maxDimension: 1280 });
+		thumbnailPreview.value = result;
+		state.thumbnail_url = result;
+	} catch (err: any) {
+		error.value = err?.message || 'Could not use that image';
+		thumbnailFile.value = null;
 	}
 });
 
@@ -332,11 +496,16 @@ const handleSubmit = async (event: FormSubmitEvent<BlogPostInput>) => {
 				color: 'info'
 			});
 		} else {
-			await addPost(event.data);
+			const created = await addPost(
+				event.data,
+				!!settings.value.subscriptions && notifySubscribers.value
+			);
 
 			toast.add({
 				title: 'Post Created',
-				description: 'The blog post has been created successfully.',
+				description: created.queued
+					? `Queued for ${created.queued} subscriber${created.queued === 1 ? '' : 's'}.`
+					: 'The blog post has been created successfully.',
 				icon: 'mdi:pencil-plus',
 				color: 'success'
 			});
@@ -373,21 +542,15 @@ watch(popoverOpen, (isOpen) => {
 
 const previewDraft = (draft: Partial<BlogPostInput>) => {
 	if (!previousState.value) {
-		previousState.value = { ...state };
+		previousState.value = { ...state, media: [...state.media] };
 	}
 
-	Object.assign(state, {
-		title: draft.title || '',
-		slug: draft.slug || '',
-		content: draft.content || '',
-		thumbnail_url: draft.thumbnail_url || '',
-		tags: draft.tags || []
-	});
+	applyPost(draft);
 };
 
 const clearPreview = () => {
 	if (previousState.value) {
-		Object.assign(state, previousState.value);
+		applyPost(previousState.value);
 		previousState.value = null;
 	}
 };
@@ -398,6 +561,7 @@ const loadDraft = (draft: Partial<BlogPostInput>) => {
 		(previousState.value.title ||
 			previousState.value.slug ||
 			previousState.value.content ||
+			previousState.value.media.length > 0 ||
 			previousState.value.thumbnail_url ||
 			previousState.value.tags.length > 0);
 
@@ -410,13 +574,7 @@ const loadDraft = (draft: Partial<BlogPostInput>) => {
 		}
 	}
 
-	Object.assign(state, {
-		title: draft.title || '',
-		slug: draft.slug || '',
-		content: draft.content || '',
-		thumbnail_url: draft.thumbnail_url || '',
-		tags: draft.tags || []
-	});
+	applyPost(draft);
 
 	previousState.value = null;
 	draftSelected.value = true;

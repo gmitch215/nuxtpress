@@ -1,21 +1,6 @@
+import { mediaUrl } from '~/shared/media';
+import { excerptOf } from '~/shared/text';
 import type { BlogPost } from '~/shared/types';
-
-/** Plain-text excerpt for meta descriptions; mirrors the server-side excerpt rules. */
-function toDescription(markdown: string, max: number): string {
-	const text = (markdown || '')
-		.replace(/```[\s\S]*?```/g, ' ')
-		.replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
-		.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-		.replace(/^\s{0,3}#{1,6}\s+/gm, '')
-		.replace(/^\s{0,3}>\s?/gm, '')
-		.replace(/[*_`~]/g, '')
-		.replace(/\s+/g, ' ')
-		.trim();
-	if (text.length <= max) return text;
-	const cut = text.slice(0, max);
-	const lastSpace = cut.lastIndexOf(' ');
-	return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}...`;
-}
 
 export type BlogPostSeoContext = ReturnType<typeof useBlogPostSeoContext>;
 
@@ -47,7 +32,7 @@ export function applyBlogPostSeo(
 	const title = computed(() => `${post.value?.title || 'Blog Post'} | ${siteName.value}`);
 	const description = computed(
 		() =>
-			toDescription(post.value?.content || '', 200) ||
+			excerptOf(post.value?.content || '', 200) ||
 			settings.value.description ||
 			config.public.description
 	);
@@ -58,6 +43,7 @@ export function applyBlogPostSeo(
 		const src = post.value?.thumbnail_url || '/favicon.png';
 		return src.startsWith('http') ? src : `${origin}${src}`;
 	});
+	const mediaUrlOf = (key?: string) => (key ? `${origin}${mediaUrl(key)}` : undefined);
 	const published = computed(() => post.value?.created_at.toISOString() || '');
 	const modified = computed(() => post.value?.updated_at.toISOString() || '');
 
@@ -134,6 +120,52 @@ export function applyBlogPostSeo(
 					url: imageUrl.value
 				}
 			})
+		]);
+	}
+
+	const media = article?.media ?? [];
+	if (article && article.type === 'video' && media[0]) {
+		useSeoMeta({
+			ogVideo: mediaUrlOf(media[0].key),
+			ogVideoType: media[0].mime as 'video/mp4' | 'video/webm'
+		});
+		useSchemaOrg([
+			defineVideo({
+				name: article.title,
+				description: description.value,
+				thumbnailUrl: imageUrl.value,
+				uploadDate: article.created_at.toISOString(),
+				contentUrl: mediaUrlOf(media[0].key)
+			})
+		]);
+	} else if (article && article.type === 'music' && media[0]) {
+		useSeoMeta({
+			ogAudio: mediaUrlOf(media[0].key),
+			ogAudioType: (['audio/mpeg', 'audio/ogg', 'audio/wav'].includes(media[0].mime)
+				? media[0].mime
+				: undefined) as 'audio/mpeg' | undefined
+		});
+		useSchemaOrg([
+			{
+				'@type': 'AudioObject',
+				name: article.title,
+				description: description.value,
+				uploadDate: article.created_at.toISOString(),
+				contentUrl: mediaUrlOf(media[0].key),
+				encodingFormat: media[0].mime
+			} as any
+		]);
+	} else if (article && article.type === 'slideshow' && media.length) {
+		useSchemaOrg([
+			{
+				'@type': 'ImageGallery',
+				name: article.title,
+				image: media.map((item) => ({
+					'@type': 'ImageObject',
+					url: mediaUrlOf(item.key),
+					caption: item.caption
+				}))
+			} as any
 		]);
 	}
 

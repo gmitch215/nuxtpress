@@ -29,6 +29,7 @@
 </template>
 
 <script setup lang="ts">
+import { POST_TYPE_ICONS, POST_TYPE_LABELS } from '~/shared/media';
 import type { BlogPostSummary } from '~/shared/types';
 
 const props = defineProps<{ posts: BlogPostSummary[] }>();
@@ -40,7 +41,14 @@ const displayed = computed(() =>
 		title: post.title,
 		description: post.excerpt,
 		date: post.created_at,
-		badge: post.tags?.[0] || 'General',
+		badge:
+			post.type && post.type !== 'article'
+				? {
+						label: POST_TYPE_LABELS[post.type],
+						icon: POST_TYPE_ICONS[post.type],
+						variant: 'subtle' as const
+					}
+				: post.tags?.[0] || 'General',
 		imageSrc: post.thumbnail_url || '/favicon.png',
 		to: urlFor(post)
 	}))

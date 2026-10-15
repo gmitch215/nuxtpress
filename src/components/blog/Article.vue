@@ -53,7 +53,7 @@
 			</header>
 
 			<div
-				v-if="post.thumbnail_url"
+				v-if="post.type === 'article' && post.thumbnail_url"
 				class="w-full"
 			>
 				<img
@@ -66,10 +66,26 @@
 				/>
 			</div>
 
-			<span :style="`color: ${settings.themeColor || $config.public.themeColor}`"
+			<span
+				v-if="post.type === 'article'"
+				:style="`color: ${settings.themeColor || $config.public.themeColor}`"
 				>{{ readMinutes }} min. read</span
 			>
+			<MediaSlideshow
+				v-if="post.type === 'slideshow' && post.media.length"
+				:media="post.media"
+				:title="post.title"
+			/>
+			<MediaPlayer
+				v-else-if="(post.type === 'video' || post.type === 'music') && post.media[0]"
+				:kind="post.type"
+				:src="mediaUrl(post.media[0].key)"
+				:mime="post.media[0].mime"
+				:poster="post.thumbnail_url"
+				:title="post.title"
+			/>
 			<div
+				v-if="post.type !== 'slideshow' && renderedContent"
 				class="prose prose-lg dark:prose-invert max-w-none"
 				v-html="renderedContent"
 				style="contain-intrinsic-size: auto 500px"
@@ -112,13 +128,14 @@
 </template>
 
 <script setup lang="ts">
+import { mediaUrl } from '~/shared/media';
 import { formatDate, type BlogPost } from '~/shared/types';
 
 const props = defineProps<{ post: BlogPost }>();
 
 const { settings } = useSettings();
 const { loggedIn } = useLogin();
-const { renderMarkdown } = useMarkdown();
+const { renderMarkdown, prepareMarkdown } = useMarkdown();
 const { sanitizeHtml } = useSanitizeHtml();
 const router = useRouter();
 const toast = useToast();
@@ -146,6 +163,12 @@ const renderedContent = computed(() => {
 		return '<p class="text-red-500">Error rendering content</p>';
 	}
 });
+
+// an edit can introduce a shortcode; the render reruns once the dataset has loaded
+watch(
+	() => props.post.content,
+	(content) => prepareMarkdown(content)
+);
 
 const analytics = useAnalytics(() => props.post.slug);
 onMounted(() => analytics.start());

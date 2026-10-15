@@ -1,8 +1,11 @@
-import hljs from 'highlight.js';
 import { kv } from 'hub:kv';
-import { marked } from 'marked';
 import { ensureDatabase } from '~/server/utils/db';
+import { mediaBodyHtml } from '~/server/utils/media-html';
 import { excerptOf, getUrlStyle, listFullPosts } from '~/server/utils/posts';
+import { stripDataImages } from '~/shared/images';
+import { markdownToHtml } from '~/shared/markdown';
+import { mediaUrl } from '~/shared/media';
+import { sanitizeHtml } from '~/shared/sanitize';
 import { datedPostPath, slugPostPath } from '~/shared/types';
 
 const FEED_CACHE_KEY = 'nuxtpress:feed_xml:v3';
@@ -80,18 +83,6 @@ export default defineEventHandler(async (event) => {
 		if (updatedAt.getTime() > mostRecentUpdate.getTime()) mostRecentUpdate = updatedAt;
 	});
 
-	const renderer = new marked.Renderer();
-	renderer.code = ({ text, lang }) => {
-		const validLanguage = lang && hljs.getLanguage(lang) ? lang : 'plaintext';
-		try {
-			const highlighted = hljs.highlight(text, { language: validLanguage }).value;
-			return `<pre><code class="hljs language-${validLanguage}">${highlighted}</code></pre>`;
-		} catch (e) {
-			console.error('Syntax highlighting error:', e);
-			return `<pre><code class="hljs">${text}</code></pre>`;
-		}
-	};
-
 	const feedCategoriesXml = Array.from(allTags)
 		.map((tag) => `  <category term="${escapeXml(tag)}" />`)
 		.join('\n');
@@ -110,15 +101,18 @@ export default defineEventHandler(async (event) => {
 
 				let renderedContent = '';
 				try {
-					const html = marked(post.content || '', {
-						renderer,
-						breaks: true,
-						gfm: true
-					});
-					if (typeof html === 'string') renderedContent = html;
+					renderedContent = stripDataImages(sanitizeHtml(markdownToHtml(post.content || '')));
+					if (post.type !== 'article') {
+						renderedContent = mediaBodyHtml(post, origin, renderedContent);
+					}
 				} catch (e) {
 					console.warn('feed markdown render failed for', post.slug, e);
 				}
+
+				const file = post.type === 'video' || post.type === 'music' ? post.media[0] : undefined;
+				const enclosureXml = file
+					? `    <link rel="enclosure" type="${escapeXml(file.mime)}" href="${escapeXml(`${origin}${mediaUrl(file.key)}`)}" length="${file.size}" />`
+					: '';
 
 				const authorName = post.author?.displayName || siteAuthor;
 				const authorUri = post.author?.username
@@ -137,7 +131,8 @@ export default defineEventHandler(async (event) => {
 					authorUri,
 					'    </author>',
 					categoriesXml,
-					`    <summary type="text">${escapeXml(excerptOf(post.content, 300))}</summary>`,
+					enclosureXml,
+					`    <summary type="text">${escapeXml(excerptOf(post.content, 300) || post.title)}</summary>`,
 					`    <content type="html">${escapeXml(renderedContent)}</content>`,
 					'  </entry>'
 				]
