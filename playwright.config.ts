@@ -6,6 +6,9 @@ const COVERAGE = process.env.COVERAGE === '1';
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8787';
 const SETUP_URL = process.env.PLAYWRIGHT_SETUP_URL || 'http://127.0.0.1:8788';
 
+const APP_MODULE_RE = /\/_nuxt\/(?!@(?:id|fs)\/).+?\.(?:vue|ts)(?:\?|$)/;
+const SERVER_COVERAGE_DIR = fileURLToPath(new URL('./.v8-coverage', import.meta.url));
+
 const baseReporters: any[] = [['list']];
 if (isCI) baseReporters.push(['github']);
 
@@ -21,15 +24,8 @@ const reporters: any[] = COVERAGE
 						name: 'NuxtPress Coverage',
 						outputDir: './coverage',
 						reports: [['lcovonly', { file: 'lcov.info' }], 'console-summary'],
-						entryFilter: (entry: { url: string }) => {
-							const url = entry.url || '';
-							if (!url) return false;
-							if (url.includes('node_modules')) return false;
-							if (url.includes('/_nuxt/builds/')) return false;
-							if (url.startsWith('chrome-extension:')) return false;
-							return url.includes('/_nuxt/') || url.startsWith(BASE_URL);
-						},
-						sourceFilter: (path: string) => path.includes('src/')
+						entryFilter: (entry: { url: string }) => APP_MODULE_RE.test(entry.url),
+						sourceFilter: (path: string) => path.startsWith('src/')
 					}
 				}
 			]
@@ -52,6 +48,12 @@ export default defineConfig({
 		{
 			command: 'bun run dev:test',
 			url: BASE_URL,
+			...(COVERAGE
+				? {
+						env: { NODE_V8_COVERAGE: SERVER_COVERAGE_DIR },
+						gracefulShutdown: { signal: 'SIGINT' as const, timeout: 15_000 }
+					}
+				: {}),
 			reuseExistingServer: !isCI,
 			timeout: 240_000,
 			stdout: 'pipe',

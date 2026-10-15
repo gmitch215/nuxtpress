@@ -1,4 +1,5 @@
 import type { FullConfig } from '@playwright/test';
+import { rmSync } from 'node:fs';
 
 const TEST_ADMIN = { username: 'admin', password: 'adminpass' };
 
@@ -35,6 +36,9 @@ async function warm(base: string, paths: string[]) {
 }
 
 export default async function globalSetup(_config: FullConfig) {
+	// the dev server writes its V8 dump on exit, so clearing here cannot race a live write
+	if (process.env.COVERAGE === '1') rmSync('.v8-coverage', { recursive: true, force: true });
+
 	const base = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8787';
 	const setupBase = process.env.PLAYWRIGHT_SETUP_URL || 'http://127.0.0.1:8788';
 

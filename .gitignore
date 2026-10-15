@@ -26,6 +26,7 @@ logs
 
 # Playwright + coverage
 playwright-report
+.v8-coverage
 playwright-results
 test-results
 coverage

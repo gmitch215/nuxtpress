@@ -5,7 +5,7 @@ import { loginViaApi } from '../utils/auth';
 import { createPost, deletePost } from '../utils/posts';
 
 // the test lane runs the fs-lite kv driver, where a key maps to a file path with ':' as '/'
-const KV_DIR = join(process.env.NUXTPRESS_DATA_DIR || '.data', 'kv');
+const KV_DIR = join(process.env.NUXTPRESS_DATA_DIR || '.data-test', 'kv');
 const LEGACY_INDEX = join(KV_DIR, 'analytics', 'slugs');
 
 /** Writes an event in the pre-v1.4 shape: no vsid, and the slug listed in one JSON array. */
@@ -271,6 +271,6 @@ test.describe('analytics API', () => {
 		const body = await (await request.get('/api/analytics/summary?range=7d')).json();
 		expect(body.audience.loggedIn).toBeGreaterThan(0);
 		// the summary exposes counts only, never an identity
-		expect(JSON.stringify(body)).not.toContain('admin');
+		expect(JSON.stringify(body)).not.toMatch(/"(user|userId|username|displayName)"/);
 	});
 });

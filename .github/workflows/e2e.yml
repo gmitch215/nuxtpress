@@ -50,6 +50,10 @@ jobs:
         env:
           CI: '1'
 
+      - name: Collect server coverage
+        if: always()
+        run: bun run coverage:server
+
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v7
@@ -65,5 +69,5 @@ jobs:
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
+          files: ./coverage/lcov.info,./coverage/server/lcov.info
           fail_ci_if_error: false
