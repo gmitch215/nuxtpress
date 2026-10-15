@@ -31,7 +31,7 @@
     "@nuxt/kit": "^4.6.1",
     "@nuxt/ui": "^4.11.3",
     "@nuxthub/core": "^0.10.8",
-    "@nuxtjs/robots": "^6.2.4",
+    "@nuxtjs/robots": "^7.0.0",
     "@nuxtjs/sitemap": "^8.6.2",
     "@tiptap/extension-audio": "^3.32.0",
     "@tiptap/extension-emoji": "^3.32.0",
