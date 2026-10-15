@@ -567,6 +567,8 @@
 
 <script setup lang="ts">
 import type { FormSubmitEvent } from '#ui/types';
+import type { InlineImageOptions } from '~/composables/useInlineImage';
+import { FAVICON_TYPES } from '~/shared/images';
 import { settingsSchema, type SettingsInput } from '~/shared/schemas';
 
 const toast = useToast();
@@ -739,39 +741,35 @@ onMounted(async () => {
 	}
 });
 
-// Watch for favicon ICO file changes
-watch(faviconFile, async (file) => {
-	if (file) {
-		const reader = new FileReader();
-
-		reader.onload = (e) => {
-			const result = e.target?.result as string;
-			faviconPreview.value = result;
-			state.favicon = result;
-		};
-
-		reader.readAsDataURL(file);
-	} else {
-		faviconPreview.value = null;
+async function readIcon(
+	file: File | null,
+	options: InlineImageOptions,
+	apply: (value: string | null) => void
+) {
+	if (!file) return apply(null);
+	try {
+		apply(await fileToInlineImage(file, options));
+	} catch (err: any) {
+		error.value = err?.message || 'Could not use that image';
+		apply(null);
 	}
-});
+}
 
-// Watch for favicon PNG file changes
-watch(faviconPngFile, async (file) => {
-	if (file) {
-		const reader = new FileReader();
+watch(faviconFile, (file) =>
+	readIcon(file, { types: FAVICON_TYPES, maxDimension: 256 }, (value) => {
+		faviconPreview.value = value;
+		if (value) state.favicon = value;
+		else faviconFile.value = null;
+	})
+);
 
-		reader.onload = (e) => {
-			const result = e.target?.result as string;
-			faviconPngPreview.value = result;
-			state.faviconPng = result;
-		};
-
-		reader.readAsDataURL(file);
-	} else {
-		faviconPngPreview.value = null;
-	}
-});
+watch(faviconPngFile, (file) =>
+	readIcon(file, { types: ['image/png'], maxDimension: 512, output: 'image/png' }, (value) => {
+		faviconPngPreview.value = value;
+		if (value) state.faviconPng = value;
+		else faviconPngFile.value = null;
+	})
+);
 
 const clearFavicon = () => {
 	faviconFile.value = null;

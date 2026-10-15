@@ -15,6 +15,7 @@
 				Audio
 			]"
 			:handlers="customHandlers"
+			:editor-props="editorProps"
 			content-type="markdown"
 			placeholder="Write your content here... (Markdown supported)"
 			class="w-full min-h-50 border border-gray-300 dark:border-gray-700 rounded-lg p-4"
@@ -41,6 +42,8 @@ import Audio from '@tiptap/extension-audio';
 import { Emoji, gitHubEmojis } from '@tiptap/extension-emoji';
 import { TextAlign } from '@tiptap/extension-text-align';
 import Youtube from '@tiptap/extension-youtube';
+import type { EditorView } from '@tiptap/pm/view';
+import { INLINE_IMAGE_TYPES } from '~/shared/images';
 
 const props = defineProps<{
 	modelValue: string;
@@ -65,8 +68,67 @@ watch(localContent, (newValue) => {
 	emit('update:modelValue', newValue);
 });
 
+const toast = useToast();
+
+async function insertImage(view: EditorView, file: File) {
+	try {
+		const src = await fileToInlineImage(file);
+		const alt = file.name.replace(/\.[^.]+$/, '').replace(/[[\]()]/g, '');
+		const node = view.state.schema.nodes.image?.create({ src, alt });
+		if (node) view.dispatch(view.state.tr.replaceSelectionWith(node));
+	} catch (err: any) {
+		toast.add({
+			title: 'Image Not Added',
+			description: err?.message || 'Could not add the image',
+			icon: 'mdi:alert-circle',
+			color: 'error'
+		});
+	}
+}
+
+function imageFrom(files?: FileList | null): File | undefined {
+	return Array.from(files ?? []).find((file) => file.type.startsWith('image/'));
+}
+
+function pickImage(view: EditorView) {
+	const input = document.createElement('input');
+	input.type = 'file';
+	input.accept = INLINE_IMAGE_TYPES.join(',');
+	input.onchange = () => {
+		const file = input.files?.[0];
+		if (file) insertImage(view, file);
+	};
+	input.click();
+}
+
+const editorProps = {
+	handlePaste: (view: EditorView, event: ClipboardEvent) => {
+		const file = imageFrom(event.clipboardData?.files);
+		if (!file) return false;
+		event.preventDefault();
+		insertImage(view, file);
+		return true;
+	},
+	handleDrop: (view: EditorView, event: DragEvent) => {
+		const file = imageFrom(event.dataTransfer?.files);
+		if (!file) return false;
+		event.preventDefault();
+		insertImage(view, file);
+		return true;
+	}
+};
+
 // Custom handlers for YouTube and Audio
 const customHandlers = {
+	imageUpload: {
+		canExecute: () => true,
+		execute: (editor: Editor) => {
+			pickImage(editor.view);
+			return editor.chain();
+		},
+		isActive: () => false,
+		isDisabled: () => false
+	},
 	youtube: {
 		canExecute: (editor: Editor) => editor.can().insertContent({ type: 'youtube' }),
 		execute: (editor: Editor) => {
@@ -235,7 +297,12 @@ const toolbar: EditorToolbarItem<typeof customHandlers>[][] = [
 		{
 			kind: 'image',
 			icon: 'lucide:image',
-			tooltip: { text: 'Image' }
+			tooltip: { text: 'Image from URL' }
+		},
+		{
+			kind: 'imageUpload',
+			icon: 'lucide:image-up',
+			tooltip: { text: 'Upload Image' }
 		}
 	],
 	[
