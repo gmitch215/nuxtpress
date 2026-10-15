@@ -1,6 +1,6 @@
 <template>
 	<div
-		class="flex items-center justify-between w-full mt-8 min-h-32 bg-gray-950 border-t-2 border-gray-800 text-gray-700 text-left px-4 sm:px-8 md:px-12 text-xs sm:text-sm md:text-md"
+		class="flex flex-col gap-6 items-start justify-between w-full mt-8 min-h-32 bg-gray-950 border-t-2 border-gray-800 text-gray-700 text-left px-4 py-6 sm:flex-row sm:items-center sm:px-8 md:px-12 text-xs sm:text-sm md:text-md"
 	>
 		<div class="flex flex-col items-start">
 			<span class="text-[10px] sm:text-xs">Copyright © 2025 NuxtPress. All Rights Reserved.</span>
@@ -25,5 +25,10 @@
 				</NuxtLink>
 			</div>
 		</div>
+		<SubscribeForm v-if="settings.subscriptions" />
 	</div>
 </template>
+
+<script setup lang="ts">
+const { settings } = useSettings();
+</script>

@@ -1,6 +1,6 @@
 import type { RouteLocationNormalizedLoaded } from 'vue-router';
 
-const IGNORED = ['/setup', '/profile'];
+const IGNORED = ['/setup', '/profile', '/unsubscribe', '/subscribe/confirm'];
 
 function isTracked(route: RouteLocationNormalizedLoaded): boolean {
 	// the two post permalinks are the only routes carrying a slug param, and BlogArticle already

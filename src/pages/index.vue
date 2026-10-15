@@ -71,6 +71,15 @@
 			to="/admin/users"
 		/>
 		<UButton
+			v-if="isAdmin"
+			icon="mdi:email-multiple-outline"
+			color="warning"
+			variant="outline"
+			size="lg"
+			title="Subscribers"
+			to="/admin/subscribers"
+		/>
+		<UButton
 			v-if="loggedIn"
 			icon="mdi:logout"
 			color="neutral"
@@ -138,7 +147,7 @@
 			</div>
 		</template>
 		<template #body>
-			<BlogForm
+			<LazyBlogForm
 				mode="create"
 				@cancel="
 					newPostOpen = false;
@@ -159,7 +168,7 @@
 		class="min-w-140"
 	>
 		<template #body>
-			<SettingsForm
+			<LazySettingsForm
 				@cancel="settingsOpen = false"
 				@submit="settingsOpen = false"
 			/>
@@ -172,7 +181,7 @@
 		class="max-w-[90vw] w-full"
 	>
 		<template #body>
-			<AnalyticsDashboard v-if="analyticsOpen" />
+			<LazyAnalyticsDashboard v-if="analyticsOpen" />
 		</template>
 	</UModal>
 	<UModal
