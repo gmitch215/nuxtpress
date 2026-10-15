@@ -15,6 +15,9 @@
   - [Installing Updates](#installing-updates-from-the-template)
   - [Using Your Blog](#using-your-blog)
   - [Post URLs](#post-urls)
+  - [Post Types](#post-types)
+  - [Images](#images)
+  - [Email Subscribers](#email-subscribers)
   - [Analytics](#analytics)
 - [For Developers: Technical Documentation](#for-developers-technical-documentation)
   - [Overview](#overview)
@@ -35,7 +38,7 @@
 NuxtPress is a modern blogging platform that's:
 
 - **Fast**: Server-rendered on Cloudflare's edge network
-- **Simple**: One Worker, one D1 database, no other infrastructure
+- **Simple**: One Worker, a D1 database, KV namespaces and an R2 bucket
 - **Secure**: User accounts with administrator and author roles, sealed session cookies
 - **Findable**: Canonical URLs, an Atom feed, and a sitemap that lists every post
 - **Free**: Runs on Cloudflare's free tier
@@ -46,7 +49,7 @@ NuxtPress is a modern blogging platform that's:
 
 1. Click the "Deploy to Cloudflare" button above
 2. Connect your GitHub account and let Cloudflare fork the repository
-3. Cloudflare provisions the Worker, the D1 database and the KV namespaces from `wrangler.jsonc`
+3. Cloudflare provisions the Worker, the D1 database, the KV namespaces and the R2 bucket from `wrangler.jsonc`
 4. Set `NUXT_SESSION_PASSWORD` and `NUXT_ANALYTICS_SALT` (see below), then redeploy
 5. Open your blog and create the first administrator at `/setup`
 
@@ -213,9 +216,12 @@ author can write and edit their own posts; an administrator can also manage user
    - **Content**: Markdown, with a rich-text editor and a live preview
    - **Tags**: Comma-separated tags
    - **Thumbnail** (optional): Upload an image or point at an external URL
+   - **Email Subscribers**: Appears when email delivery is configured; see [Email Subscribers](#email-subscribers)
 3. Click "Publish"
 
 Drafts save as you type and reappear in the form the next time you open it.
+
+Fenced code blocks are highlighted for the 36 languages in highlight.js's common set plus Clojure, Dart, Dockerfile, Elixir, Gradle, Groovy, Haskell, Julia, LaTeX, Nginx, Nix, OCaml, PowerShell, Protocol Buffers, Scala and Vim. Any other language renders as plain text. Emoji shortcodes such as `:tada:` render as emoji.
 
 #### Managing Posts
 
@@ -241,6 +247,79 @@ Both always return the post. The **Post URL Style** setting picks which one the 
 
 Slugs have to be unique across the whole blog, because a slug addresses a post on its own. Creating or renaming a post to a slug that is already taken returns a 409.
 
+#### Post Types
+
+A post is an article by default. When the R2 bucket is bound, the New Post window shows a switcher on the left of the button row with three more types:
+
+| Type      | What you add                                                      |
+| --------- | ----------------------------------------------------------------- |
+| Slideshow | Up to 30 images, each with an optional caption, reorderable       |
+| Video     | One MP4 or WebM file and an optional caption                      |
+| Music     | One MP3, M4A, OGG, WAV, WebM or FLAC file and an optional caption |
+
+- Each type keeps what you entered while the window is open, so switching never discards work. The title, slug, tags and thumbnail are shared.
+- Files upload as soon as you choose them and are attached when you press Create Post. A saved post keeps its type; you can replace its files but not convert it.
+- Images are shrunk to at most 2000 pixels and re-encoded as WebP in the browser. GIFs are not re-encoded. An image can be up to 25 MB and a video or music file up to 100 MB.
+- The thumbnail defaults to the first slide, or to a frame the browser captures from the video. Choosing a thumbnail yourself overrides it. Music uses the thumbnail as cover art.
+- Readers get a slideshow with arrows, dots, keyboard and swipe, or a video or audio player. The home page, archives and tag pages mark the type on each card.
+- Slideshow captions become the post's text, so search, excerpts, the feed and subscriber emails use them. The Atom feed adds an enclosure for video and music, and the sitemap lists slides and videos.
+- Uploads that no post or draft references are deleted by a daily task once they are a day old. Deleting a post deletes its files.
+
+#### Images
+
+The editor's image button takes a URL. The upload button next to it, pasting an image, and dropping
+an image onto the editor all embed the file in the post as a `data:` URL, so no storage bucket is
+involved.
+
+- PNG, JPEG, WebP and GIF are accepted. SVG is not.
+- Photos are scaled to at most 1600 pixels and re-encoded as WebP in the browser. Each image has to fit in about 250 KB once encoded; GIFs are not re-encoded, so an animated GIF over that size is rejected.
+- The post body is limited to 500,000 characters, which includes its images.
+- Thumbnails and favicons use the same upload path. An uploaded thumbnail is served from `/thumbnails/{id}` and an uploaded favicon from `/favicon.png` or `/favicon.ico`, so neither is copied into page payloads.
+- The Atom feed leaves inline images out of entries, and subscriber emails link the thumbnail instead of embedding it.
+
+#### Scheduled Tasks
+
+| Task          | Schedule           | What it does                                     |
+| ------------- | ------------------ | ------------------------------------------------ |
+| `mail:drain`  | every 5 minutes    | Sends queued subscriber emails                   |
+| `media:sweep` | daily at 04:00 UTC | Deletes uploads that no post or draft references |
+
+Each run is one Worker request. With nothing queued, a `mail:drain` run reads at most one indexed row, so the five-minute schedule stays far inside the free plan's request and D1 limits. Both entries live in `wrangler.jsonc` and `nuxt.config.ts`.
+
+#### Email Subscribers
+
+Readers can subscribe to get an email when you publish a post. The feature is off until email delivery is configured, and the subscribe form only appears once it is.
+
+Open `/admin/subscribers` as an administrator to configure delivery, send a test email, see the queue, and manage the list. Pick one transport:
+
+| Transport                | What it needs                                                                      |
+| ------------------------ | ---------------------------------------------------------------------------------- |
+| Cloudflare Email Binding | A `send_email` binding named `EMAIL` (in `wrangler.jsonc`) and an onboarded domain |
+| Cloudflare Email API     | A Cloudflare account ID and an API token with permission to send email             |
+| Custom SMTP              | Host, port, security (STARTTLS, implicit TLS or none), and optional login          |
+
+The From address has to belong to a domain your transport is allowed to send for. API tokens and SMTP passwords are encrypted with a key derived from `NUXT_SESSION_PASSWORD` before they reach KV and are never returned by the API. Changing `NUXT_SESSION_PASSWORD` makes saved credentials unreadable, so enter them again, and invalidates confirmation and unsubscribe links already sent.
+
+Delivery can also be set with environment variables, which take precedence over the form. Setting `NUXT_MAIL_SMTP_HOST` selects SMTP; otherwise `NUXT_MAIL_CF_ACCOUNT_ID` with `NUXT_MAIL_CF_API_TOKEN` selects the Cloudflare API.
+
+| Variable                                            | Description                         |
+| --------------------------------------------------- | ----------------------------------- |
+| `NUXT_MAIL_FROM`                                    | From address                        |
+| `NUXT_MAIL_SMTP_HOST`, `NUXT_MAIL_SMTP_PORT`        | SMTP server, port defaults to `587` |
+| `NUXT_MAIL_SMTP_TLS`                                | `starttls`, `implicit` or `off`     |
+| `NUXT_MAIL_SMTP_USER`, `NUXT_MAIL_SMTP_PASS`        | SMTP login                          |
+| `NUXT_MAIL_CF_ACCOUNT_ID`, `NUXT_MAIL_CF_API_TOKEN` | Cloudflare Email API credentials    |
+
+How it works:
+
+- A visitor enters an address and gets a confirmation email. The address only becomes a subscriber after they open the link and press the confirm button.
+- Every email has an unsubscribe link and `List-Unsubscribe` headers, so mail clients can show their own unsubscribe button. Unsubscribing deletes the address.
+- Each client address can request one confirmation a minute, and an unconfirmed address is not mailed again for ten minutes.
+- When you create a post with **Email Subscribers** checked, one email per confirmed subscriber is queued. The checkbox is not shown when editing, so an edit never sends again.
+- A scheduled task sends the queue every five minutes, 25 emails per run. A failed email is retried twice before it is marked failed. **Send Queue Now** on the admin page runs the same step.
+- The email carries the title, thumbnail, a short excerpt and a link to the post.
+- Links in emails use `NUXT_PUBLIC_SITE_URL`, or the origin of the administrator's last save on `/admin/subscribers` when that variable is unset. Request headers from visitors are never used, and the subscribe form returns a 503 until one of the two exists.
+
 #### Analytics
 
 The dashboard behind the chart icon reports views, unique visitors, active reading time, scroll completion, top posts, top pages, referrers, countries, operating systems, devices, browsers, and the signed-in share of traffic.
@@ -258,7 +337,7 @@ NuxtPress is a full-stack blogging platform built with:
 - **Frontend**: Nuxt 4 with Vue 3, Nuxt UI v4, and Tailwind CSS
 - **Backend**: Nitro server routes running on Cloudflare Workers
 - **Database**: Cloudflare D1 through Drizzle ORM
-- **Storage**: Cloudflare KV for settings, caches and analytics; blob storage for avatars
+- **Storage**: Cloudflare KV for settings, caches and analytics; R2 for avatars and post media
 - **Auth**: `nuxt-auth-utils` sealed session cookies, validated against the users table per request
 - **Validation**: Zod schemas shared between client and server
 - **Deployment**: One Cloudflare Worker, deployed with Wrangler or Workers Builds
@@ -323,13 +402,14 @@ NuxtPress is a full-stack blogging platform built with:
 #### Available Scripts
 
 - `bun run dev` - Start the development server on port 8787
-- `bun run dev:test` - Start the dev server with the test environment file
+- `bun run dev:test` - Start the dev server with the test environment file and an empty `.data-test` directory
 - `bun run dev:cloudflare` - Build, then serve the Worker locally through Wrangler
 - `bun run dev:setup-test` - Start a second dev server on port 8788 against an empty data directory, used by the first-run setup spec
 - `bun run build` - Build for production
 - `bun run test` - Run the Playwright suite
 - `bun run test:headed` - Run the suite with a visible browser
-- `bun run test:coverage` - Run the suite with V8 coverage reporting
+- `bun run test:coverage` - Run the suite with client and server V8 coverage
+- `bun run coverage:server` - After `test:coverage`, write server coverage to `coverage/server/lcov.info`
 - `bun run test:report` - Open the last HTML test report
 - `bun run prettier` - Format code with Prettier
 - `bun run prettier:check` - Check code formatting
@@ -423,6 +503,9 @@ nuxtpress/
 │   ├── components/
 │   │   ├── analytics/TopTable.vue  # Top posts / top pages table
 │   │   ├── blog/Article.vue        # Post view, shared by both permalinks
+│   │   ├── mail/Settings.vue       # Email delivery settings and queue
+│   │   ├── media/                  # Slideshow and file editors, slideshow and player views
+│   │   ├── subscribe/Form.vue      # Public subscribe form
 │   │   ├── AnalyticsDashboard.vue  # Admin analytics modal
 │   │   ├── BlogForm.vue            # Post create/edit form
 │   │   ├── BlogPostGroup.vue       # Post listing
@@ -434,6 +517,7 @@ nuxtpress/
 │   │   ├── useBlogPostSeo.ts       # Article meta and structured data
 │   │   ├── useCanonical.ts         # Site origin and rel=canonical
 │   │   ├── useDatabase.ts          # Post list and settings state
+│   │   ├── useInlineImage.ts       # Downscales uploaded images into data URLs
 │   │   ├── usePostUrl.ts           # Permalink resolution
 │   │   └── useSanitizeHtml.ts      # Markdown output sanitizer
 │   ├── middleware/                 # Route guards: auth, admin, first-run setup
@@ -442,6 +526,9 @@ nuxtpress/
 │   │   ├── [slug].vue              # Slug-only permalink
 │   │   ├── [year]/…/[slug].vue     # Dated permalink and date archives
 │   │   ├── admin/users.vue         # User management
+│   │   ├── admin/subscribers.vue   # Mail settings and subscriber list
+│   │   ├── subscribe/confirm.vue   # Confirm a subscription
+│   │   ├── unsubscribe.vue         # Unsubscribe
 │   │   ├── authors/[username].vue  # Author profile
 │   │   └── setup.vue               # First-run onboarding
 │   ├── plugins/                    # Client plugins, including page-view tracking
@@ -450,9 +537,10 @@ nuxtpress/
 │   │   ├── db/schema.ts            # Drizzle schema
 │   │   ├── middleware/             # Session bootstrap
 │   │   ├── plugins/                # Session hooks
-│   │   ├── routes/                 # feed.xml, favicons, avatars, thumbnails
-│   │   └── utils/                  # auth, db, posts, analytics, ua
-│   ├── shared/                     # Zod schemas and types shared with the client
+│   │   ├── routes/                 # feed.xml, favicons, avatars, thumbnails, media
+│   │   ├── tasks/                  # mail/drain.ts (email queue), media/sweep.ts (unused uploads)
+│   │   └── utils/                  # auth, db, posts, analytics, ua, mail, subscribers, secrets
+│   ├── shared/                     # Schemas, types, markdown and highlighting shared by client and server
 │   └── types/                      # Session type augmentation
 ├── tests/                          # Playwright specs and helpers
 ├── scripts/                        # Maintenance scripts
@@ -460,7 +548,7 @@ nuxtpress/
 ├── public/                         # Static files
 ├── nuxt.config.ts
 ├── playwright.config.ts
-├── wrangler.jsonc                  # D1 and KV bindings
+├── wrangler.jsonc                  # D1, KV, R2 and email bindings, cron triggers
 └── tsconfig.json
 ```
 
@@ -688,6 +776,34 @@ remaining administrator.
 | `/api/blog/draft` | GET    | authenticated | List your saved drafts      |
 | `/api/blog/draft` | POST   | authenticated | Save a draft, keyed by slug |
 
+A draft belongs to the author who saved it. Only that author can list, open or overwrite it, and saving over another author's slug returns 403. Drafts saved before owners were recorded belong to the primary administrator, the earliest-created one, until someone saves them.
+
+#### Media
+
+| Endpoint            | Method | Access        | Purpose                                                                   |
+| ------------------- | ------ | ------------- | ------------------------------------------------------------------------- |
+| `/api/media/upload` | PUT    | authenticated | Raw file body with its `Content-Type`; returns `{ key, url, mime, size }` |
+| `/media/{key}`      | GET    | public        | Streams a stored file with HTTP range support and a one-year cache header |
+
+`POST /api/blog/create` and `PATCH /api/blog/update` accept `type` (`article`, `slideshow`, `video` or `music`) and `media`, a list of `{ key, caption?, width?, height? }`. The server reads each file's type and size back from storage, rejects keys the author did not upload, and ignores `content` for slideshows, which is built from the captions. `GET /api/settings` returns `media: true` when storage is available.
+
+#### Subscribers
+
+| Endpoint                        | Method | Access        | Purpose                                                                |
+| ------------------------------- | ------ | ------------- | ---------------------------------------------------------------------- |
+| `/api/subscribers/subscribe`    | POST   | public        | Send a confirmation email. 404 while subscriptions are off             |
+| `/api/subscribers/confirm`      | POST   | signed link   | Body `{ id, token }`. Activates the subscriber                         |
+| `/api/subscribers/unsubscribe`  | POST   | signed link   | `id` and `token` in the body or the query. Accepts RFC 8058 one-click  |
+| `/api/admin/subscribers`        | GET    | administrator | List with `search`, `status`, `limit` and `offset`                     |
+| `/api/admin/subscribers/export` | GET    | administrator | CSV of every subscriber, streamed a page at a time                     |
+| `/api/admin/subscribers/{id}`   | DELETE | administrator | Remove a subscriber and their queued emails                            |
+| `/api/admin/mail`               | GET    | administrator | Delivery settings, status and queue counts. Secrets are never returned |
+| `/api/admin/mail`               | POST   | administrator | Save delivery settings. A blank secret keeps the stored one            |
+| `/api/admin/mail/test`          | POST   | administrator | Send a test email to `{ to }`                                          |
+| `/api/admin/mail/drain`         | POST   | administrator | Send the next batch of the queue now                                   |
+
+`POST /api/blog/create` also accepts `notify: true` next to `post`. When delivery is active the post is queued for every confirmed subscriber and the response carries `queued`.
+
 #### Analytics
 
 | Endpoint                 | Method | Access        | Purpose                                                          |
@@ -704,11 +820,12 @@ remaining administrator.
 | `/robots.txt`                  | Crawl rules. Indexing is disabled in development |
 | `/thumbnails/{id}`             | A post's stored thumbnail image                  |
 | `/avatars/{pathname}`          | A user's avatar image                            |
+| `/media/{key}`                 | A slideshow image, video or music file           |
 | `/favicon.ico`, `/favicon.png` | Site icons, proxied when set to an external URL  |
 
 ### Database Schema
 
-NuxtPress uses Cloudflare D1. Both tables are created and migrated on the first request after a
+NuxtPress uses Cloudflare D1. The tables are created and migrated on the first request after a
 deploy, so there is no manual migration step.
 
 #### `blog_posts` Table
@@ -721,6 +838,8 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   content TEXT NOT NULL,
   thumbnail TEXT,
   thumbnail_url TEXT,
+  type TEXT NOT NULL DEFAULT 'article',
+  media TEXT,
   author_id TEXT,
   created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
   updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
@@ -738,6 +857,8 @@ CREATE INDEX idx_blog_posts_author ON blog_posts(author_id);
 - `content`: Markdown
 - `thumbnail`: base64 image, served by `/thumbnails/{id}`
 - `thumbnail_url`: external image URL, used in preference to `thumbnail`
+- `type`: `article`, `slideshow`, `video` or `music`
+- `media`: JSON list of `{ key, mime, size, caption?, width?, height? }`, null for articles
 - `author_id`: references `users.id`, set to null when that user is deleted
 - `created_at` / `updated_at`: milliseconds since the epoch
 - `tags`: comma-separated list, null when the post has no tags
@@ -766,6 +887,45 @@ CREATE UNIQUE INDEX idx_users_username ON users(username);
 - `role`: `administrator` or `author`
 - `avatar_pathname`: key into blob storage, served by `/avatars/{pathname}`
 - `is_active`: `0` suspends the account and invalidates its sessions on the next request
+
+#### `subscribers` Table
+
+```sql
+CREATE TABLE IF NOT EXISTS subscribers (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+  confirmed_at INTEGER,
+  confirmation_sent_at INTEGER
+);
+
+CREATE UNIQUE INDEX idx_subscribers_email ON subscribers(email);
+```
+
+- `email`: lowercased address
+- `status`: `pending` until the confirmation link is used, then `active`
+
+#### `mail_outbox` Table
+
+```sql
+CREATE TABLE IF NOT EXISTS mail_outbox (
+  id TEXT PRIMARY KEY,
+  subscriber_id TEXT NOT NULL,
+  post_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  attempts INTEGER NOT NULL DEFAULT 0,
+  error TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+);
+
+CREATE UNIQUE INDEX idx_mail_outbox_subscriber_post ON mail_outbox(subscriber_id, post_id);
+CREATE INDEX idx_mail_outbox_status_created ON mail_outbox(status, created_at);
+```
+
+- `status`: `pending`, `sending`, `sent` or `failed`. A `sending` row older than ten minutes goes back to `pending`
+- Sent rows are deleted after 30 days
 
 ### Contributing
 
@@ -807,8 +967,8 @@ Contributions are welcome! Here's how to get started:
 - **TypeScript**: Strict mode is enabled; ensure all types are correct
 - **Components**: Use Nuxt UI components when possible for consistency
 - **API Routes**: Use Zod schemas for validation
-- **Tests**: Playwright covers every page and API route. Run `bun run test` before opening a pull request
-- **Server Utils**: Helper functions live in `src/server/utils/`: auth, database, post queries, analytics
+- **Tests**: Playwright covers every page and API route. Run `bun run test` before opening a pull request. The test environment sets `NUXTPRESS_MAIL_SINK=1`, which records outgoing mail in KV instead of sending it; specs read it from `/api/admin/mail/sink`. A recipient at `@fail.invalid` always fails, and one at `@fail-later.invalid` fails only post emails
+- **Server Utils**: Helper functions live in `src/server/utils/`: auth, database, post queries, analytics, mail, subscribers
 - **Database**: Always use parameterized queries to prevent SQL injection
 
 ### License

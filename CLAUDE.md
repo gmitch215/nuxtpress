@@ -9,7 +9,8 @@ NuxtPress is a Nuxt 4 blog app for Cloudflare Workers. Keep changes small, reada
 - `src/composables/` - shared client and data helpers such as blog, auth, markdown, and extensions utilities
 - `src/server/api/` - HTTP endpoints for auth, settings, and blog CRUD
 - `src/server/db/schema.ts` - Drizzle schema for the `blog_posts` table
-- `src/server/utils/` - server-side helpers: auth/session, DB setup, post queries and caching (`posts.ts`), analytics rollups (`analytics.ts`), UA and geo classification (`ua.ts`)
+- `src/server/utils/` - server-side helpers: auth/session, DB setup, post queries and caching (`posts.ts`), analytics rollups (`analytics.ts`), UA and geo classification (`ua.ts`), mail transports and settings (`mail.ts`), subscribers and the send queue (`subscribers.ts`), sealing and signed links (`secrets.ts`)
+- `src/server/tasks/` - Nitro scheduled tasks; `mail/drain.ts` sends the email queue (cron in `wrangler.jsonc` and `scheduledTasks` in `nuxt.config.ts`)
 - `src/shared/` - Zod schemas and shared TypeScript types
 - `migrations/` - manual SQL migrations and one-off maintenance scripts
 - `public/` - static assets served as-is
@@ -19,13 +20,14 @@ NuxtPress is a Nuxt 4 blog app for Cloudflare Workers. Keep changes small, reada
 ## Common Commands
 
 - `bun run dev` - start the app on port 8787
-- `bun run dev:test` - start the app with the test env file
+- `bun run dev:test` - start the app with the test env file against a wiped `.data-test`, so a run never sees an earlier run's posts or analytics and never touches `.data`
 - `bun run dev:setup-test` - start a second server on 8788 against a wiped `.data-setup-test`, used by the setup-flow spec
 - `bun run dev:cloudflare` - build and run with Wrangler locally
 - `bun run build` - production build
 - `bun run prettier` - format the repo
 - `bun run prettier:check` - check formatting without writing
 - `bun run test` - Playwright suite; `bun run test:coverage` adds V8 coverage
+- `bun run test:coverage` then `bun run coverage:server` - client coverage in `coverage/lcov.info`, server coverage in `coverage/server/lcov.info`
 - `bunx vue-tsc -b --force` - typecheck app, server and shared projects (plain `-p tsconfig.json` checks nothing, the root config is references-only)
 - `bunx wrangler d1 execute DB --file "migrations/migrate_timestamps.sql"` - run the legacy timestamp fix against D1
 
@@ -61,3 +63,23 @@ NuxtPress is a Nuxt 4 blog app for Cloudflare Workers. Keep changes small, reada
 - Posts answer on both `/{year}/{month}/{day}/{slug}` and `/{slug}`. Neither 404s; the `urlStyle` KV setting only decides which one is rendered and canonical. Keep link generation going through `usePostUrl()` / `postPath()` so the feed, sitemap and UI agree.
 - `/api/blog/list` returns summaries without post bodies. Anything needing full content uses `/api/blog/find` or `listFullPosts()`; putting the list in an SSR-rendered component's payload is what made every page heavy before v1.4.
 - Analytics folds beacons per visit (`vsid`), so a heartbeat must never be counted as another view. Long ranges read monthly rollups to stay inside the Worker subrequest budget.
+- Mail is optional. `mailActive(env)` gates every public path; `/api/settings` exposes it as `subscriptions`. `env` is `event.context.cloudflare.env` (`cloudflareEnv(event)`), and scheduled tasks get it from the task context, because the `EMAIL` binding is not on `process.env`.
+- `edgeport/smtp` imports `cloudflare:sockets`, so it is loaded with a dynamic `import()` only on the SMTP path. It cannot run under `nuxi dev`; the test lane sets `NUXTPRESS_MAIL_SINK=1`, which records what each transport would send instead of sending it.
+- Mail credentials are sealed with a key derived from the session secret (`secrets.ts`). Never return them from an API, and keep a blank secret field meaning "keep the stored value".
+- Uploaded images are `data:` URLs capped by `INLINE_IMAGE_MAX_CHARS` in `src/shared/images.ts`. Public payloads must point at `/thumbnails/{id}` or `/favicon.png` (`publicThumbnailUrl()`, `publicIconPath()`), never inline the data URL.
+- Reserved slugs (`RESERVED_SLUGS` in `src/shared/schemas.ts`) are the top-level routes; add a name there when adding a page at `/{name}`.
+- Email links take their origin from `siteOrigin()` (config, or the origin an admin request stored). Never derive it from a visitor's `Host` header; `rememberOrigin()` is for admin routes only.
+- Post types live in `blog_posts.type` plus a `media` JSON column. `src/shared/media.ts` holds the caps and mime allowlists and `checkPostRules` in `src/shared/schemas.ts` the per-type rules. A slideshow's `content` is derived from its captions (`contentFromMedia`) so search, excerpts, the feed and SEO need no per-type branches. The type cannot change after creation.
+- Media is served by `src/server/routes/media/[...key].get.ts`, not `blob.serve`, which buffers the whole object. Uploads stream: R2 only accepts a stream of known length, so `upload.put.ts` pipes the body through a `FixedLengthStream`; the dev filesystem driver does not need that and hides the failure, so check media changes under `wrangler dev --local` too. `mediaAvailable()` gates every media route, and `/api/settings.media` hides the editor modes when the `BLOB` binding is missing.
+- `resolveMedia` reads mime and size back from storage and checks ownership; never trust the form. Add a type to the sweep's reference scan (`referencedMediaKeys`) when a new column can point at `media/` keys.
+- `/media` is a reserved slug, and the Worker needs the `BLOB` r2 binding (avatars use it as well).
+- A raw `db.run` result carries `rows` under libsql (dev) and `results` under D1 (production). Read both through `rowsOf()` in `src/shared/rows.ts`; reading only `rows` made `userCount()` 0 and `columnExists()` false under D1 (seen on `wrangler dev --local`), which re-ran every migration on each cold start and left the `/api/setup/init` count check unable to fire, with only username uniqueness behind it. The setup insert is also conditional (`WHERE NOT EXISTS`), so a concurrent second setup inserts nothing.
+- Markdown renders through the single `Marked` instance in `src/shared/markdown.ts`, shared by the post page and the feed. Never call `marked.use()` per render: it chains the extension again each time, and render time grew from 5 ms to 58 ms per post after 3,000 renders in one isolate. Highlight languages live in `src/shared/highlight.ts` (the full highlight.js build is 1.1 MB). The emoji dataset is about 800 KB, so `prepareMarkdown()` loads it only for posts containing a `:shortcode:`; `useBlogPostPage` awaits it so server and client render the same HTML.
+- On the home page the editor, settings form and analytics dashboard are `Lazy` components. Importing them eagerly makes every reader preload tiptap, the emoji data and the charts library; the dev server cannot show this, only the production build's `modulepreload` list can.
+- `POST /api/settings` checks every field before the first write and rejects non-text values, so a 400 never leaves a half-saved form. Slugs that cannot exist (`SLUG_RE`) are a 404 before they reach a KV key.
+- Post HTML goes through the one string sanitizer in `src/shared/sanitize.ts`, on the server and the client, and the Atom feed uses it too. It rebuilds allowlisted tags from a strict grammar and escapes whatever it cannot parse. The earlier server path was a regex chain that let `<img/src=x/onerror=...>` and an unclosed `<script src=...>` through into the server-rendered page. Do not add a regex pass or a DOM-only path beside it.
+- Drafts stay in one KV namespace (`nuxtpress:blog_draft:{slug}`) but record `authorId` from the session. `draftAccess()` in `src/server/utils/drafts.ts` gates list, open and overwrite on it; a draft with no `authorId` belongs to `firstAdminId()`, the earliest-created administrator. Never read the owner from the request body.
+- `GET /api/admin/subscribers/export` streams pages keyed on the primary key (`exportSubscriberPages`, page size `mail.exportPageSize`). The old version held about 1.1 KB of heap per subscriber, which breaks a 128 MB Worker near 100,000 rows. The test lane sets `NUXT_MAIL_EXPORT_PAGE_SIZE=2` so a few rows cross page boundaries.
+- Import third-party CSS into `prose.scss` with `@include meta.load-css(...)`, never `@import 'x.css' layer(...)`: Sass leaves that as a runtime import, which 404s in production (code blocks had no colors there). `scripts/check-build-output.mjs` fails the build if a built stylesheet still imports anything.
+- `nuxt.config.ts` has a `build:manifest` hook that stops readers prefetching the chunks only the lazy admin components reach. Add a component to its list when it should not be prefetched.
+- Under `COVERAGE=1` each error the dev server handles costs seconds (Nitro's dev error handler builds a `SourceMapConsumer` of the whole bundle per error and never frees it), so a spec that provokes many errors belongs at the API level, not through page navigations.
