@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import type { H3Event } from 'h3';
 import { db } from 'hub:db';
 import { blogPosts, users } from '~/server/db/schema';
@@ -59,11 +59,23 @@ export async function adminCount(): Promise<number> {
 	return rows.filter((u) => u.id).length;
 }
 
+/** The primary administrator: the earliest-created one, so the answer never depends on row order. */
 export async function firstAdminId(): Promise<string | null> {
 	const rows = await db
 		.select({ id: users.id })
 		.from(users)
 		.where(eq(users.role, 'administrator'))
+		.orderBy(asc(users.createdAt), asc(users.id))
 		.limit(1);
 	return rows[0]?.id ?? null;
+}
+
+/** The session snapshot only refreshes on a client fetch, so anything destructive reads the row. */
+export async function storedAvatarPathname(userId: string): Promise<string | null> {
+	const rows = await db
+		.select({ avatarPathname: users.avatarPathname })
+		.from(users)
+		.where(eq(users.id, userId))
+		.limit(1);
+	return rows[0]?.avatarPathname ?? null;
 }

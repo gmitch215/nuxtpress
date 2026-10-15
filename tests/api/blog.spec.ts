@@ -78,6 +78,18 @@ test.describe('blog API', () => {
 		expect(res.status()).toBe(404);
 	});
 
+	test('GET /api/blog/find treats slugs that cannot exist as a miss', async ({ request }) => {
+		for (const slug of ['\u0000', 'a\u0000b', 'a/b', '../etc', 'UPPER', 'a:b', 'x'.repeat(201)]) {
+			const res = await request.get('/api/blog/find', { params: { slug } });
+			expect(res.status(), JSON.stringify(slug)).toBe(404);
+		}
+	});
+
+	test('a null byte in the path is a 404 page, not a server error', async ({ request }) => {
+		const res = await request.get('/%00');
+		expect(res.status()).toBe(404);
+	});
+
 	test('GET /api/blog/find rejects invalid date', async ({ request }) => {
 		const res = await request.get('/api/blog/find', {
 			params: { slug: 'whatever', year: 'notanumber', month: 99, day: 99 }

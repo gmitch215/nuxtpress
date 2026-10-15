@@ -1,5 +1,6 @@
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from 'hub:db';
+import { users } from '~/server/db/schema';
 import { describeDbError, ensureDatabase, markSetupCompleted, userCount } from '~/server/utils/db';
 import { firstZodIssueMessage, RESERVED_USERNAMES, userCreateSchema } from '~/shared/schemas';
 
@@ -34,9 +35,11 @@ export default defineEventHandler(async (event) => {
 	const bio = parsed.data.bio || null;
 	const now = Date.now();
 	try {
+		// the guard makes a concurrent second setup insert nothing instead of a second administrator
 		await db.run(sql`
 			INSERT INTO users (id, username, display_name, password_hash, role, bio, avatar_pathname, is_active, created_at, updated_at)
-			VALUES (${id}, ${username}, ${parsed.data.displayName}, ${hash}, ${'administrator'}, ${bio}, ${null}, ${1}, ${now}, ${now})
+			SELECT ${id}, ${username}, ${parsed.data.displayName}, ${hash}, ${'administrator'}, ${bio}, ${null}, ${1}, ${now}, ${now}
+			WHERE NOT EXISTS (SELECT 1 FROM users)
 		`);
 	} catch (error: any) {
 		const reason = describeDbError(error);
@@ -45,6 +48,11 @@ export default defineEventHandler(async (event) => {
 			throw createError({ statusCode: 409, statusMessage: 'Username already taken' });
 		}
 		throw createError({ statusCode: 500, statusMessage: `Setup failed: ${reason}` });
+	}
+
+	const created = await db.select({ id: users.id }).from(users).where(eq(users.id, id)).limit(1);
+	if (created.length === 0) {
+		throw createError({ statusCode: 409, statusMessage: 'Setup has already been completed' });
 	}
 
 	await db.run(

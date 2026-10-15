@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
 import { blob } from 'hub:blob';
 import { db } from 'hub:db';
-import { kv } from 'hub:kv';
 import { blogPosts, users } from '~/server/db/schema';
 import { adminCount, firstAdminId, requireAdmin } from '~/server/utils/auth';
 import { ensureDatabase } from '~/server/utils/db';
+import { authorPosts, invalidateAuthor } from '~/server/utils/posts';
 
 export default defineEventHandler(async (event) => {
 	const me = await requireAdmin(event);
@@ -38,6 +38,7 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
+	const affected = await authorPosts(id);
 	const reassignTo = await firstAdminId();
 	if (reassignTo) {
 		await db
@@ -61,15 +62,7 @@ export default defineEventHandler(async (event) => {
 
 	await db.delete(users).where(eq(users.id, id));
 
-	for (const k of [
-		'nuxtpress:blog_posts_list',
-		'nuxtpress:blog_posts_list:v1',
-		'nuxtpress:blog_posts_list:v2'
-	]) {
-		try {
-			await kv.del(k);
-		} catch {}
-	}
+	await invalidateAuthor(id, affected);
 
 	return { ok: true };
 });

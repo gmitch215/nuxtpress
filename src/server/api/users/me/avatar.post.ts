@@ -2,8 +2,9 @@ import { eq } from 'drizzle-orm';
 import { blob, ensureBlob } from 'hub:blob';
 import { db } from 'hub:db';
 import { users } from '~/server/db/schema';
-import { requireAuthed } from '~/server/utils/auth';
+import { requireAuthed, storedAvatarPathname } from '~/server/utils/auth';
 import { ensureDatabase } from '~/server/utils/db';
+import { invalidateAuthor } from '~/server/utils/posts';
 
 export default defineEventHandler(async (event) => {
 	const me = await requireAuthed(event);
@@ -25,11 +26,12 @@ export default defineEventHandler(async (event) => {
 		addRandomSuffix: true
 	});
 
-	const previous = me.avatarPathname;
+	const previous = await storedAvatarPathname(me.id);
 	await db
 		.update(users)
 		.set({ avatarPathname: uploaded.pathname, updatedAt: new Date() })
 		.where(eq(users.id, me.id));
+	await invalidateAuthor(me.id);
 
 	if (previous && previous !== uploaded.pathname) {
 		try {

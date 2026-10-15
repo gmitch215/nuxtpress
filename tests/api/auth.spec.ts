@@ -1,4 +1,23 @@
 import { expect, test } from '../fixtures';
+import { createUser, deleteUser } from '../utils/users';
+
+const ADMIN_ROUTES: [method: 'get' | 'post' | 'patch' | 'delete', path: string][] = [
+	['get', '/api/admin/users'],
+	['post', '/api/admin/users'],
+	['patch', '/api/admin/users/nobody'],
+	['delete', '/api/admin/users/nobody'],
+	['get', '/api/admin/subscribers'],
+	['get', '/api/admin/subscribers/export'],
+	['delete', '/api/admin/subscribers/nobody'],
+	['get', '/api/admin/mail'],
+	['post', '/api/admin/mail'],
+	['post', '/api/admin/mail/test'],
+	['post', '/api/admin/mail/drain'],
+	['get', '/api/admin/mail/sink'],
+	['delete', '/api/admin/mail/sink'],
+	['get', '/api/analytics/summary'],
+	['post', '/api/settings']
+];
 
 test.describe('auth API', () => {
 	test('GET /api/verify returns loggedIn:false anonymously', async ({ request }) => {
@@ -63,5 +82,26 @@ test.describe('auth API', () => {
 		expect(out.ok()).toBe(true);
 		const verify = await request.get('/api/verify');
 		expect((await verify.json()).loggedIn).toBe(false);
+	});
+
+	test('every admin route refuses anonymous visitors and authors', async ({ request }) => {
+		for (const [method, path] of ADMIN_ROUTES) {
+			const res = await request[method](path);
+			expect(res.status(), `anonymous ${method} ${path}`).toBe(403);
+		}
+
+		const author = await createUser(request);
+		try {
+			const login = await request.post('/api/login', {
+				data: { username: author.username, password: author.password }
+			});
+			expect(login.ok()).toBe(true);
+			for (const [method, path] of ADMIN_ROUTES) {
+				const res = await request[method](path);
+				expect(res.status(), `author ${method} ${path}`).toBe(403);
+			}
+		} finally {
+			await deleteUser(request, author.id);
+		}
 	});
 });

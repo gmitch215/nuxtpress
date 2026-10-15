@@ -1,11 +1,82 @@
 import { kv } from 'hub:kv';
 import { requireAdmin } from '~/server/utils/auth';
 import { invalidatePostCaches, URL_STYLE_KV_KEY } from '~/server/utils/posts';
+import {
+	INLINE_IMAGE_MAX_CHARS as FAVICON_MAX_CHARS,
+	FAVICON_TYPES,
+	INLINE_IMAGE_TYPES,
+	isDataImage
+} from '~/shared/images';
+
+// the form echoes /favicon.ico back when a stored upload is unchanged; that path is not a new value
+function checkFavicon(value: string, label: string, types: readonly string[]): string {
+	if (value.startsWith('data:')) {
+		if (!isDataImage(value, types, FAVICON_MAX_CHARS)) {
+			throw createError({
+				statusCode: 400,
+				statusMessage: `${label} upload must be an allowed image type under about 250 KB`
+			});
+		}
+		return value;
+	}
+	if (value.startsWith('/') || value.startsWith('http://') || value.startsWith('https://')) {
+		return value;
+	}
+	throw createError({
+		statusCode: 400,
+		statusMessage: `${label} must be a valid URL, relative path (starting with /), or data URI`
+	});
+}
+
+const TEXT_FIELDS = [
+	'name',
+	'description',
+	'bio',
+	'author',
+	'themeColor',
+	'favicon',
+	'faviconPng',
+	'website',
+	'github',
+	'twitter',
+	'instagram',
+	'patreon',
+	'linkedin',
+	'discord',
+	'supportEmail',
+	'urlStyle'
+] as const;
 
 export default defineEventHandler(async (event) => {
 	await requireAdmin(event);
 
 	const config = useRuntimeConfig();
+
+	const body = (await readBody(event)) ?? {};
+	for (const key of TEXT_FIELDS) {
+		if (body[key] !== undefined && body[key] !== null && typeof body[key] !== 'string') {
+			throw createError({ statusCode: 400, statusMessage: `${key} must be text` });
+		}
+	}
+	if (body.message !== undefined && body.message !== null) {
+		const m = body.message;
+		if (typeof m !== 'object' || Array.isArray(m)) {
+			throw createError({ statusCode: 400, statusMessage: 'Message must be an object' });
+		}
+		for (const key of ['text', 'link', 'icon', 'type']) {
+			if (m[key] !== undefined && m[key] !== null && typeof m[key] !== 'string') {
+				throw createError({ statusCode: 400, statusMessage: `Message ${key} must be text` });
+			}
+		}
+		if (m.ttl !== undefined && m.ttl !== null && !Number.isFinite(m.ttl)) {
+			throw createError({ statusCode: 400, statusMessage: 'Message TTL must be a number' });
+		}
+	}
+
+	// every field is checked before the first write, so a 400 never leaves a half-saved form
+	const writes: Array<() => Promise<unknown>> = [];
+	const put = (key: string, value: string) => writes.push(() => kv.set(key, value));
+	let rebuild = false;
 
 	const {
 		name,
@@ -25,7 +96,7 @@ export default defineEventHandler(async (event) => {
 		supportEmail,
 		urlStyle,
 		message
-	} = await readBody(event);
+	} = body;
 
 	if (name) {
 		if (name.length > 50) {
@@ -35,7 +106,7 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
-		await kv.set('nuxtpress:setting:name', name);
+		put('nuxtpress:setting:name', name);
 	}
 
 	if (description) {
@@ -46,7 +117,7 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
-		await kv.set('nuxtpress:setting:description', description);
+		put('nuxtpress:setting:description', description);
 	}
 
 	if (bio) {
@@ -57,7 +128,7 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
-		await kv.set('nuxtpress:setting:bio', bio);
+		put('nuxtpress:setting:bio', bio);
 	}
 
 	if (author) {
@@ -68,7 +139,7 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
-		await kv.set('nuxtpress:setting:author', author);
+		put('nuxtpress:setting:author', author);
 	}
 
 	if (themeColor) {
@@ -80,42 +151,18 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
-		await kv.set('nuxtpress:setting:theme_color', themeColor);
+		put('nuxtpress:setting:theme_color', themeColor);
 	}
 
-	if (favicon) {
-		// Support external URLs, relative paths (starting with /), and base64 data URIs
-		if (
-			favicon.startsWith('data:') ||
-			favicon.startsWith('/') ||
-			favicon.startsWith('http://') ||
-			favicon.startsWith('https://')
-		) {
-			await kv.set('nuxtpress:setting:favicon', favicon);
-		} else {
-			throw createError({
-				statusCode: 400,
-				statusMessage: 'Favicon must be a valid URL, relative path (starting with /), or data URI'
-			});
-		}
+	if (favicon && favicon !== '/favicon.ico') {
+		put('nuxtpress:setting:favicon', checkFavicon(favicon, 'Favicon', FAVICON_TYPES));
 	}
 
-	if (faviconPng) {
-		// Support external URLs, relative paths (starting with /), and base64 data URIs
-		if (
-			faviconPng.startsWith('data:') ||
-			faviconPng.startsWith('/') ||
-			faviconPng.startsWith('http://') ||
-			faviconPng.startsWith('https://')
-		) {
-			await kv.set('nuxtpress:setting:favicon_png', faviconPng);
-		} else {
-			throw createError({
-				statusCode: 400,
-				statusMessage:
-					'Favicon PNG must be a valid URL, relative path (starting with /), or data URI'
-			});
-		}
+	if (faviconPng && faviconPng !== '/favicon.png') {
+		put(
+			'nuxtpress:setting:favicon_png',
+			checkFavicon(faviconPng, 'Favicon PNG', INLINE_IMAGE_TYPES)
+		);
 	}
 
 	if (website) {
@@ -128,7 +175,7 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
-		await kv.set('nuxtpress:setting:website', website);
+		put('nuxtpress:setting:website', website);
 	}
 
 	if (github) {
@@ -137,7 +184,7 @@ export default defineEventHandler(async (event) => {
 			github0 = github.replace(/^(https?:\/\/)?(www\.)?github\.com\//, '');
 		}
 
-		await kv.set('nuxtpress:setting:github', github0);
+		put('nuxtpress:setting:github', github0);
 	}
 
 	if (twitter) {
@@ -148,7 +195,7 @@ export default defineEventHandler(async (event) => {
 				.replace(/^(https?:\/\/)?(www\.)?twitter\.com\//, '');
 		}
 
-		await kv.set('nuxtpress:setting:twitter', twitter0);
+		put('nuxtpress:setting:twitter', twitter0);
 	}
 
 	if (instagram) {
@@ -157,7 +204,7 @@ export default defineEventHandler(async (event) => {
 			instagram0 = instagram.replace(/^(https?:\/\/)?(www\.)?instagram\.com\//, '');
 		}
 
-		await kv.set('nuxtpress:setting:instagram', instagram0);
+		put('nuxtpress:setting:instagram', instagram0);
 	}
 
 	if (patreon) {
@@ -166,7 +213,7 @@ export default defineEventHandler(async (event) => {
 			patreon0 = patreon.replace(/^(https?:\/\/)?(www\.)?patreon\.com\//, '');
 		}
 
-		await kv.set('nuxtpress:setting:patreon', patreon0);
+		put('nuxtpress:setting:patreon', patreon0);
 	}
 
 	if (linkedin) {
@@ -175,7 +222,7 @@ export default defineEventHandler(async (event) => {
 			linkedin0 = linkedin.replace(/^(https?:\/\/)?(www\.)?linkedin\.com\/in\//, '');
 		}
 
-		await kv.set('nuxtpress:setting:linkedin', linkedin0);
+		put('nuxtpress:setting:linkedin', linkedin0);
 	}
 
 	if (discord) {
@@ -193,7 +240,7 @@ export default defineEventHandler(async (event) => {
 
 		// Store full URL with https:// if not present
 		const discord0 = discord.startsWith('http') ? discord : `https://${discord}`;
-		await kv.set('nuxtpress:setting:discord', discord0);
+		put('nuxtpress:setting:discord', discord0);
 	}
 
 	if (supportEmail) {
@@ -213,7 +260,7 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
-		await kv.set('nuxtpress:setting:support_email', supportEmail);
+		put('nuxtpress:setting:support_email', supportEmail);
 	}
 
 	if (urlStyle !== undefined) {
@@ -224,16 +271,29 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
-		await kv.set(URL_STYLE_KV_KEY, urlStyle);
+		put(URL_STYLE_KV_KEY, urlStyle);
 		// the feed and sitemap embed post URLs, so both have to be rebuilt
-		await invalidatePostCaches();
+		rebuild = true;
 	}
 
-	if (message) {
+	if (message && typeof message.text === 'string' && message.text.trim() === '') {
+		writes.push(() => kv.del('nuxtpress:setting:message'));
+	} else if (message) {
+		if (typeof message.text !== 'string') {
+			throw createError({ statusCode: 400, statusMessage: 'Message text is required' });
+		}
+
 		if (message.text.length > 300) {
 			throw createError({
 				statusCode: 400,
 				statusMessage: 'Message text cannot be longer than 300 characters'
+			});
+		}
+
+		if (message.link && !/^https?:\/\/\S+$/i.test(message.link)) {
+			throw createError({
+				statusCode: 400,
+				statusMessage: 'Message link must be an http:// or https:// URL'
 			});
 		}
 
@@ -266,12 +326,13 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
-		await kv.set(
-			'nuxtpress:setting:message',
-			JSON.stringify(message),
-			ttl > 0 ? { ttl } : undefined
+		writes.push(() =>
+			kv.set('nuxtpress:setting:message', JSON.stringify(message), ttl > 0 ? { ttl } : undefined)
 		);
 	}
+
+	await Promise.all(writes.map((write) => write()));
+	if (rebuild) await invalidatePostCaches();
 
 	return {
 		name: name || config.public.name,

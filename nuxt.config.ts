@@ -16,8 +16,11 @@ export default defineNuxtConfig({
 				disallow: [
 					'/setup',
 					'/profile',
+					'/unsubscribe',
+					'/subscribe/',
 					'/admin/',
 					'/api/admin/',
+					'/api/subscribers/',
 					'/api/analytics/',
 					'/api/setup/',
 					'/api/login',
@@ -30,7 +33,7 @@ export default defineNuxtConfig({
 	},
 	sitemap: {
 		sources: ['/api/__sitemap__/urls'],
-		exclude: ['/setup', '/profile', '/admin/**'],
+		exclude: ['/setup', '/profile', '/unsubscribe', '/subscribe/**', '/admin/**'],
 		defaults: { changefreq: 'weekly', priority: 0.7 }
 	},
 	runtimeConfig: {
@@ -49,6 +52,20 @@ export default defineNuxtConfig({
 			}
 		},
 		analyticsSalt: process.env.NUXT_ANALYTICS_SALT || 'dev_analytics_salt_change_me_please',
+		media: { sweepGraceMs: 24 * 60 * 60 * 1000 },
+		mail: {
+			sink: process.env.NUXTPRESS_MAIL_SINK === '1',
+			from: '',
+			smtpHost: '',
+			smtpPort: 587,
+			smtpTls: 'starttls',
+			smtpUser: '',
+			smtpPass: '',
+			cfAccountId: '',
+			cfApiToken: '',
+			cfApiBase: 'https://api.cloudflare.com/client/v4',
+			exportPageSize: 1000
+		},
 		public: {
 			site_url: process.env.NUXT_PUBLIC_SITE_URL,
 			name: process.env.NUXT_PUBLIC_NAME || 'NuxtPress',
@@ -97,7 +114,23 @@ export default defineNuxtConfig({
 				'@tiptap/extension-text-align',
 				'@tiptap/extension-youtube',
 				'@tiptap/core',
-				'highlight.js',
+				'highlight.js/lib/common',
+				'highlight.js/lib/languages/clojure',
+				'highlight.js/lib/languages/dart',
+				'highlight.js/lib/languages/dockerfile',
+				'highlight.js/lib/languages/elixir',
+				'highlight.js/lib/languages/gradle',
+				'highlight.js/lib/languages/groovy',
+				'highlight.js/lib/languages/haskell',
+				'highlight.js/lib/languages/julia',
+				'highlight.js/lib/languages/latex',
+				'highlight.js/lib/languages/nginx',
+				'highlight.js/lib/languages/nix',
+				'highlight.js/lib/languages/ocaml',
+				'highlight.js/lib/languages/powershell',
+				'highlight.js/lib/languages/protobuf',
+				'highlight.js/lib/languages/scala',
+				'highlight.js/lib/languages/vim',
 				'marked',
 				'zod',
 				'@vue/devtools-core',
@@ -125,6 +158,31 @@ export default defineNuxtConfig({
 			for (const page of pages) {
 				page.path = page.path.replace(/^\/:year\(\)/, '/:year(20\\d{2})');
 			}
+		},
+		// the editor, settings and analytics chunks (tiptap, the emoji data, the charts) are only
+		// reachable through lazy components, so readers should not prefetch them while idle
+		'build:manifest'(manifest) {
+			const reach = (roots: string[], seen = new Set<string>()) => {
+				for (const key of roots) {
+					if (seen.has(key) || !manifest[key]) continue;
+					seen.add(key);
+					reach(manifest[key].imports ?? [], seen);
+				}
+				return seen;
+			};
+			const needed = reach(
+				Object.keys(manifest).filter((key) => manifest[key]?.isEntry || key.startsWith('pages/'))
+			);
+			const adminOnly = reach([
+				'components/BlogForm.vue',
+				'components/SettingsForm.vue',
+				'components/AnalyticsDashboard.vue'
+			]);
+			for (const key of adminOnly) {
+				if (needed.has(key)) continue;
+				manifest[key]!.prefetch = false;
+				manifest[key]!.preload = false;
+			}
 		}
 	},
 	$production: {
@@ -137,6 +195,8 @@ export default defineNuxtConfig({
 		}
 	},
 	nitro: {
+		experimental: { tasks: true },
+		scheduledTasks: { '*/5 * * * *': ['mail:drain'], '0 4 * * *': ['media:sweep'] },
 		typescript: {
 			tsConfig: {
 				include: ['../src/types/**/*.d.ts']

@@ -2,16 +2,18 @@ import { eq } from 'drizzle-orm';
 import { blob } from 'hub:blob';
 import { db } from 'hub:db';
 import { users } from '~/server/db/schema';
-import { requireAuthed } from '~/server/utils/auth';
+import { requireAuthed, storedAvatarPathname } from '~/server/utils/auth';
 import { ensureDatabase } from '~/server/utils/db';
+import { invalidateAuthor } from '~/server/utils/posts';
 
 export default defineEventHandler(async (event) => {
 	const me = await requireAuthed(event);
 	await ensureDatabase();
 
-	if (!me.avatarPathname) return { ok: true };
+	const current = await storedAvatarPathname(me.id);
+	if (!current) return { ok: true };
 	try {
-		await blob.del(me.avatarPathname);
+		await blob.del(current);
 	} catch (e) {
 		console.warn('blob delete failed', e);
 	}
@@ -19,6 +21,7 @@ export default defineEventHandler(async (event) => {
 		.update(users)
 		.set({ avatarPathname: null, updatedAt: new Date() })
 		.where(eq(users.id, me.id));
+	await invalidateAuthor(me.id);
 
 	return { ok: true };
 });

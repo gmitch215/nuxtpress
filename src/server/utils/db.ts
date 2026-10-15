@@ -1,11 +1,12 @@
 import { sql } from 'drizzle-orm';
 import { db } from 'hub:db';
 import { kv } from 'hub:kv';
+import { rowsOf } from '~/shared/rows';
 
 let isInitialized = false;
 let initPromise: Promise<void> | null = null;
 
-const CURRENT_MIGRATION_VERSION = 4;
+const CURRENT_MIGRATION_VERSION = 7;
 const MIGRATION_VERSION_KEY = 'nuxtpress:db_migration_version';
 export const SETUP_COMPLETED_KV_KEY = 'nuxtpress:setup_completed';
 
@@ -56,7 +57,7 @@ async function hasUsersTable() {
 async function columnExists(table: string, column: string) {
 	try {
 		const result = await db.run(sql.raw(`PRAGMA table_info(${table})`));
-		const rows = (result.rows ?? []) as any[];
+		const rows = rowsOf(result);
 		// libsql / D1 return PRAGMA rows as either {name: ...} objects OR positional arrays [cid, name, ...]
 		return rows.some((row) =>
 			Array.isArray(row) ? row[1] === column : row?.name === column || row?.[1] === column
@@ -89,7 +90,7 @@ async function legacyAdminSeed() {
 		const existing = await db.run(
 			sql`SELECT id, avatar_pathname FROM users WHERE username = ${'admin'} LIMIT 1`
 		);
-		const existingRow = existing.rows?.[0] as any;
+		const existingRow = rowsOf(existing)[0];
 		const existingId = existingRow?.id as string | undefined;
 		if (existingId) {
 			if (!existingRow.avatar_pathname) {
@@ -113,7 +114,7 @@ async function legacyAdminSeed() {
 		`);
 
 		const seeded = await db.run(sql`SELECT id FROM users WHERE username = ${'admin'} LIMIT 1`);
-		const seededId = (seeded.rows?.[0] as any)?.id as string | undefined;
+		const seededId = rowsOf(seeded)[0]?.id as string | undefined;
 		if (!seededId) return;
 
 		const reassigned = await db.run(
@@ -155,33 +156,26 @@ async function runSchemaMigrations() {
 		WHERE typeof(created_at) = 'text' OR typeof(updated_at) = 'text'
 		LIMIT 1
 	`);
-	if (
-		isoFormatCheck.rows &&
-		isoFormatCheck.rows.length > 0 &&
-		Number((isoFormatCheck.rows[0] as any).count) > 0
-	) {
+	if (Number(rowsOf(isoFormatCheck)[0]?.count) > 0) {
 		console.log('📝 Converting ISO timestamp strings to integers...');
 		const textRows = await db.run(sql`
 			SELECT id, created_at, updated_at FROM blog_posts
 			WHERE typeof(created_at) = 'text' OR typeof(updated_at) = 'text'
 		`);
-		if (textRows.rows && textRows.rows.length > 0) {
-			for (const row of textRows.rows) {
-				const rowData = row as any;
-				const createdMs =
-					typeof rowData.created_at === 'string'
-						? new Date(rowData.created_at).getTime()
-						: rowData.created_at;
-				const updatedMs =
-					typeof rowData.updated_at === 'string'
-						? new Date(rowData.updated_at).getTime()
-						: rowData.updated_at;
-				await db.run(sql`
-					UPDATE blog_posts
-					SET created_at = ${createdMs}, updated_at = ${updatedMs}
-					WHERE id = ${rowData.id}
-				`);
-			}
+		for (const rowData of rowsOf(textRows)) {
+			const createdMs =
+				typeof rowData.created_at === 'string'
+					? new Date(rowData.created_at).getTime()
+					: rowData.created_at;
+			const updatedMs =
+				typeof rowData.updated_at === 'string'
+					? new Date(rowData.updated_at).getTime()
+					: rowData.updated_at;
+			await db.run(sql`
+				UPDATE blog_posts
+				SET created_at = ${createdMs}, updated_at = ${updatedMs}
+				WHERE id = ${rowData.id}
+			`);
 		}
 	}
 
@@ -190,11 +184,7 @@ async function runSchemaMigrations() {
 		WHERE typeof(created_at) = 'integer' AND created_at < 10000000000
 		LIMIT 1
 	`);
-	if (
-		oldFormatCheck.rows &&
-		oldFormatCheck.rows.length > 0 &&
-		Number((oldFormatCheck.rows[0] as any).count) > 0
-	) {
+	if (Number(rowsOf(oldFormatCheck)[0]?.count) > 0) {
 		await db.run(sql`
 			UPDATE blog_posts
 			SET created_at = created_at * 1000, updated_at = updated_at * 1000
@@ -229,6 +219,41 @@ async function runSchemaMigrations() {
 
 	await ensureColumn('blog_posts', 'author_id', 'TEXT');
 	await db.run(sql`CREATE INDEX IF NOT EXISTS idx_blog_posts_author ON blog_posts(author_id)`);
+
+	await ensureColumn('blog_posts', 'type', "TEXT NOT NULL DEFAULT 'article'");
+	await ensureColumn('blog_posts', 'media', 'TEXT');
+
+	await db.run(sql`
+		CREATE TABLE IF NOT EXISTS subscribers (
+			id TEXT PRIMARY KEY,
+			email TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'pending',
+			created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+			confirmed_at INTEGER,
+			confirmation_sent_at INTEGER
+		)
+	`);
+	await db.run(sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_subscribers_email ON subscribers(email)`);
+
+	await db.run(sql`
+		CREATE TABLE IF NOT EXISTS mail_outbox (
+			id TEXT PRIMARY KEY,
+			subscriber_id TEXT NOT NULL,
+			post_id TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'pending',
+			attempts INTEGER NOT NULL DEFAULT 0,
+			error TEXT,
+			created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+			updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+		)
+	`);
+	await db.run(
+		sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_mail_outbox_subscriber_post ON mail_outbox(subscriber_id, post_id)`
+	);
+	await db.run(sql`DROP INDEX IF EXISTS idx_mail_outbox_status_created`);
+	await db.run(
+		sql`CREATE INDEX IF NOT EXISTS idx_mail_outbox_status_updated ON mail_outbox(status, updated_at)`
+	);
 }
 
 export async function ensureDatabase() {
@@ -292,5 +317,5 @@ export async function ensureDatabase() {
 export async function userCount(): Promise<number> {
 	await ensureDatabase();
 	const res = await db.run(sql`SELECT COUNT(*) as count FROM users`);
-	return Number((res.rows?.[0] as any)?.count ?? 0);
+	return Number(rowsOf(res)[0]?.count ?? 0);
 }

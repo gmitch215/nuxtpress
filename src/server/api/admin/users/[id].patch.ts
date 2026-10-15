@@ -3,6 +3,7 @@ import { db } from 'hub:db';
 import { users } from '~/server/db/schema';
 import { adminCount, requireAdmin } from '~/server/utils/auth';
 import { describeDbError, ensureDatabase } from '~/server/utils/db';
+import { invalidateAuthor } from '~/server/utils/posts';
 import { firstZodIssueMessage, RESERVED_USERNAMES, userUpdateSchema } from '~/shared/schemas';
 
 export default defineEventHandler(async (event) => {
@@ -68,6 +69,7 @@ export default defineEventHandler(async (event) => {
 
 	try {
 		await db.update(users).set(updates).where(eq(users.id, id));
+		await invalidateAuthor(id);
 	} catch (error: any) {
 		const reason = describeDbError(error);
 		console.error('user UPDATE failed:', reason, error);

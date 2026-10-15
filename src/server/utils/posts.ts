@@ -2,12 +2,28 @@ import { desc, eq, like, or, sql } from 'drizzle-orm';
 import { db } from 'hub:db';
 import { kv } from 'hub:kv';
 import { blogPosts, users } from '~/server/db/schema';
+import type { MediaItem, PostType } from '~/shared/media';
+import { excerptOf } from '~/shared/text';
 import type { BlogPost, BlogPostSummary, PublicUser, UrlStyle } from '~/shared/types';
+
+export { excerptOf, markdownToText } from '~/shared/text';
 
 export const URL_STYLE_KV_KEY = 'nuxtpress:setting:url_style';
 
-const LIST_CACHE_KEY = 'nuxtpress:blog_summaries:v1';
+const LIST_CACHE_KEY = 'nuxtpress:blog_summaries:v2';
+const POST_CACHE_VERSIONS = ['', 'v2:', 'v3:', 'v4:'];
 const LIST_CACHE_TTL = 60 * 3;
+
+/** unstorage parses JSON on read, so a value written with JSON.stringify comes back as an object. */
+export function parseCached<T>(value: unknown): T | null {
+	if (value === null || value === undefined || value === '') return null;
+	if (typeof value !== 'string') return value as T;
+	try {
+		return JSON.parse(value) as T;
+	} catch {
+		return null;
+	}
+}
 
 /** Every cache key a post mutation has to drop, across historical key versions. */
 export const POST_LIST_CACHE_KEYS = [
@@ -15,6 +31,7 @@ export const POST_LIST_CACHE_KEYS = [
 	'nuxtpress:blog_posts_list:v1',
 	'nuxtpress:blog_posts_list:v2',
 	'nuxtpress:blog_posts_list:v3',
+	'nuxtpress:blog_summaries:v1',
 	LIST_CACHE_KEY,
 	'nuxtpress:feed_xml:v2',
 	'nuxtpress:feed_xml:v3',
@@ -38,45 +55,36 @@ export async function getUrlStyle(): Promise<UrlStyle> {
 	}
 }
 
-/**
- * Strips markdown to readable plain text for excerpts, meta descriptions and feed summaries.
- * Order matters: fenced code and images go before inline syntax so their delimiters don't leak.
- */
-export function markdownToText(markdown: string): string {
-	return markdown
-		.replace(/```[\s\S]*?```/g, ' ')
-		.replace(/~~~[\s\S]*?~~~/g, ' ')
-		.replace(/<!--[\s\S]*?-->/g, ' ')
-		.replace(/<[^>]+>/g, ' ')
-		.replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
-		.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-		.replace(/^\s{0,3}>\s?/gm, '')
-		.replace(/^\s{0,3}#{1,6}\s+/gm, '')
-		.replace(/^\s{0,3}([-*_]\s*){3,}$/gm, ' ')
-		.replace(/^\s{0,3}[-*+]\s+/gm, '')
-		.replace(/^\s{0,3}\d+\.\s+/gm, '')
-		.replace(/`([^`]*)`/g, '$1')
-		.replace(/(\*\*|__)(.*?)\1/g, '$2')
-		.replace(/(\*|_)(.*?)\1/g, '$2')
-		.replace(/\+\+(.*?)\+\+/g, '$1')
-		.replace(/~~(.*?)~~/g, '$1')
-		.replace(/&nbsp;/g, ' ')
-		.replace(/\s+/g, ' ')
-		.trim();
+/** Data URLs stay in the row; every public payload points at the cacheable route instead. */
+export function publicThumbnailUrl(row: {
+	id: string;
+	thumbnailUrl: string | null;
+	hasThumbnail: boolean | number;
+	type?: PostType;
+	firstMediaKey?: string | null;
+}): string | undefined {
+	if (row.thumbnailUrl?.startsWith('data:')) return `/thumbnails/${row.id}`;
+	const explicit = row.thumbnailUrl || (row.hasThumbnail ? `/thumbnails/${row.id}` : undefined);
+	if (explicit) return explicit;
+	return row.type === 'slideshow' && row.firstMediaKey ? `/${row.firstMediaKey}` : undefined;
 }
 
-export function excerptOf(markdown: string, max = 200): string {
-	const text = markdownToText(markdown || '');
-	if (text.length <= max) return text;
-	const cut = text.slice(0, max);
-	const lastSpace = cut.lastIndexOf(' ');
-	return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}...`;
+export function parseMedia(raw: string | null | undefined): MediaItem[] {
+	if (!raw) return [];
+	try {
+		const parsed = JSON.parse(raw);
+		return Array.isArray(parsed) ? (parsed as MediaItem[]) : [];
+	} catch {
+		return [];
+	}
 }
 
 const summarySelect = {
 	id: blogPosts.id,
 	title: blogPosts.title,
 	slug: blogPosts.slug,
+	type: blogPosts.type,
+	firstMediaKey: sql<string | null>`json_extract(${blogPosts.media}, '$[0].key')`,
 	content: blogPosts.content,
 	thumbnailUrl: blogPosts.thumbnailUrl,
 	hasThumbnail: sql<number>`CASE WHEN ${blogPosts.thumbnail} IS NULL THEN 0 ELSE 1 END`,
@@ -94,6 +102,8 @@ type SummaryRow = {
 	id: string;
 	title: string;
 	slug: string;
+	type: PostType;
+	firstMediaKey: string | null;
 	content: string;
 	thumbnailUrl: string | null;
 	hasThumbnail: number;
@@ -129,9 +139,10 @@ function rowToSummary(row: SummaryRow): BlogPostSummary {
 		id: row.id,
 		title: row.title,
 		slug: row.slug,
+		type: row.type,
 		excerpt: excerptOf(row.content),
 		// thumbnails live in a text column as base64; serve them by URL so JSON stays small
-		thumbnail_url: row.thumbnailUrl || (row.hasThumbnail ? `/thumbnails/${row.id}` : undefined),
+		thumbnail_url: publicThumbnailUrl(row),
 		created_at: new Date(row.createdAt),
 		updated_at: new Date(row.updatedAt),
 		tags: parseTags(row.tags),
@@ -150,11 +161,8 @@ export function parseTags(tags: string | null): string[] {
 
 export async function listPostSummaries(): Promise<BlogPostSummary[]> {
 	try {
-		const cached = await kv.get<string>(LIST_CACHE_KEY);
-		if (cached && typeof cached === 'string') {
-			const parsed = JSON.parse(cached) as BlogPostSummary[];
-			if (Array.isArray(parsed)) return parsed;
-		}
+		const parsed = parseCached<BlogPostSummary[]>(await kv.get(LIST_CACHE_KEY));
+		if (Array.isArray(parsed)) return parsed;
 	} catch {
 		try {
 			await kv.del(LIST_CACHE_KEY);
@@ -199,18 +207,20 @@ export async function searchPostSummaries(query: string, limit = 25): Promise<Bl
 /** Full posts including content, for the feed. Ordered newest first. */
 export async function listFullPosts(limit = 50): Promise<BlogPost[]> {
 	const rows = (await db
-		.select({ ...summarySelect, authorBio: users.bio })
+		.select({ ...summarySelect, mediaJson: blogPosts.media, authorBio: users.bio })
 		.from(blogPosts)
 		.leftJoin(users, eq(blogPosts.authorId, users.id))
 		.orderBy(desc(blogPosts.createdAt))
-		.limit(limit)) as (SummaryRow & { authorBio: string | null })[];
+		.limit(limit)) as (SummaryRow & { authorBio: string | null; mediaJson: string | null })[];
 
 	return rows.map((row) => ({
 		id: row.id,
 		title: row.title,
 		slug: row.slug,
+		type: row.type,
+		media: parseMedia(row.mediaJson),
 		content: row.content,
-		thumbnail_url: row.thumbnailUrl || (row.hasThumbnail ? `/thumbnails/${row.id}` : undefined),
+		thumbnail_url: publicThumbnailUrl(row),
 		created_at: new Date(row.createdAt),
 		updated_at: new Date(row.updatedAt),
 		tags: parseTags(row.tags),
@@ -234,13 +244,39 @@ export async function invalidatePost(slug: string, createdAt: Date | string | nu
 	const y = d.getUTCFullYear();
 	const m = d.getUTCMonth() + 1;
 	const day = d.getUTCDate();
-	const keys = [`nuxtpress:slug_exists:${slug}`, `nuxtpress:blog_post:v3:${slug}:latest`];
-	for (const v of ['', 'v2:', 'v3:']) {
+	const keys = [
+		`nuxtpress:slug_exists:${slug}`,
+		`nuxtpress:blog_post:v3:${slug}:latest`,
+		`nuxtpress:blog_post:v4:${slug}:latest`
+	];
+	for (const v of POST_CACHE_VERSIONS) {
 		keys.push(`nuxtpress:blog_post:${v}${slug}:${y}:${m}:${day}`);
 	}
 	for (const key of keys) {
 		try {
 			await kv.del(key);
 		} catch {}
+	}
+}
+
+/** Per-post caches embed the author, so a profile change has to drop them; older posts age out. */
+const AUTHOR_INVALIDATION_LIMIT = 50;
+
+export async function authorPosts(userId: string) {
+	return db
+		.select({ slug: blogPosts.slug, createdAt: blogPosts.createdAt })
+		.from(blogPosts)
+		.where(eq(blogPosts.authorId, userId))
+		.orderBy(desc(blogPosts.createdAt))
+		.limit(AUTHOR_INVALIDATION_LIMIT);
+}
+
+export async function invalidateAuthor(
+	userId: string,
+	posts?: Awaited<ReturnType<typeof authorPosts>>
+) {
+	await invalidatePostCaches();
+	for (const post of posts ?? (await authorPosts(userId))) {
+		await invalidatePost(post.slug, post.createdAt);
 	}
 }

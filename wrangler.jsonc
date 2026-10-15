@@ -15,6 +15,19 @@
 			"binding": "CACHE"
 		}
 	],
+	"r2_buckets": [
+		{
+			"binding": "BLOB"
+		}
+	],
+	"send_email": [
+		{
+			"name": "EMAIL"
+		}
+	],
+	"triggers": {
+		"crons": ["*/5 * * * *", "0 4 * * *"]
+	},
 	"observability": {
 		"enabled": true,
 		"head_sampling_rate": 1.0

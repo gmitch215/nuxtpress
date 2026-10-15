@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { POST_TYPES } from '~/shared/media';
 
 export const users = sqliteTable(
 	'users',
@@ -28,6 +29,8 @@ export const blogPosts = sqliteTable(
 		id: text('id').primaryKey(),
 		title: text('title').notNull(),
 		slug: text('slug').notNull(),
+		type: text('type', { enum: POST_TYPES }).notNull().default('article'),
+		media: text('media'),
 		content: text('content').notNull(),
 		thumbnail: text('thumbnail', { mode: 'text' }),
 		thumbnailUrl: text('thumbnail_url'),
@@ -48,7 +51,50 @@ export const blogPosts = sqliteTable(
 	]
 );
 
+export const subscribers = sqliteTable(
+	'subscribers',
+	{
+		id: text('id').primaryKey(),
+		email: text('email').notNull(),
+		status: text('status', { enum: ['pending', 'active'] })
+			.notNull()
+			.default('pending'),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`),
+		confirmedAt: integer('confirmed_at', { mode: 'timestamp_ms' }),
+		confirmationSentAt: integer('confirmation_sent_at', { mode: 'timestamp_ms' })
+	},
+	(table) => [uniqueIndex('idx_subscribers_email').on(table.email)]
+);
+
+export const mailOutbox = sqliteTable(
+	'mail_outbox',
+	{
+		id: text('id').primaryKey(),
+		subscriberId: text('subscriber_id').notNull(),
+		postId: text('post_id').notNull(),
+		status: text('status', { enum: ['pending', 'sending', 'sent', 'failed'] })
+			.notNull()
+			.default('pending'),
+		attempts: integer('attempts').notNull().default(0),
+		error: text('error'),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`)
+	},
+	(table) => [
+		uniqueIndex('idx_mail_outbox_subscriber_post').on(table.subscriberId, table.postId),
+		index('idx_mail_outbox_status_updated').on(table.status, table.updatedAt)
+	]
+);
+
 export type BlogPost = typeof blogPosts.$inferSelect;
 export type NewBlogPost = typeof blogPosts.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+export type Subscriber = typeof subscribers.$inferSelect;
+export type MailOutboxRow = typeof mailOutbox.$inferSelect;

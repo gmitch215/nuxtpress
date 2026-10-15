@@ -1,9 +1,9 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from 'hub:db';
-import { blogPosts, users } from '~/server/db/schema';
+import { users } from '~/server/db/schema';
 import { ensureDatabase } from '~/server/utils/db';
-import { excerptOf, parseTags } from '~/server/utils/posts';
-import type { BlogPostSummary, PublicUser } from '~/shared/types';
+import { listPostSummaries } from '~/server/utils/posts';
+import type { PublicUser } from '~/shared/types';
 
 export default defineEventHandler(async (event) => {
 	await ensureDatabase();
@@ -25,12 +25,6 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 404, statusMessage: 'Author not found' });
 	}
 
-	const posts = await db
-		.select()
-		.from(blogPosts)
-		.where(eq(blogPosts.authorId, user.id))
-		.orderBy(desc(blogPosts.createdAt));
-
 	const authorPublic: PublicUser = {
 		id: user.id,
 		username: user.username,
@@ -40,21 +34,9 @@ export default defineEventHandler(async (event) => {
 		bio: user.bio ?? null
 	};
 
-	const mapped = posts.map(
-		(row) =>
-			({
-				id: row.id,
-				title: row.title,
-				slug: row.slug,
-				excerpt: excerptOf(row.content),
-				thumbnail_url: row.thumbnailUrl || (row.thumbnail ? `/thumbnails/${row.id}` : undefined),
-				created_at: new Date(row.createdAt),
-				updated_at: new Date(row.updatedAt),
-				tags: parseTags(row.tags),
-				author_id: row.authorId,
-				author: authorPublic
-			}) satisfies BlogPostSummary
-	);
+	const mapped = (await listPostSummaries())
+		.filter((post) => post.author_id === user.id)
+		.map((post) => ({ ...post, author: authorPublic }));
 
 	setHeader(event, 'Cache-Control', 'public, max-age=60');
 

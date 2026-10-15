@@ -1,7 +1,11 @@
+import type { MediaItem, PostType } from './media';
+
 export type BlogPost = {
 	id: string;
 	title: string;
 	slug: string;
+	type: PostType;
+	media: MediaItem[];
 	content: string;
 	thumbnail?: Uint8Array;
 	thumbnail_url?: string;
@@ -42,6 +46,7 @@ export type BlogPostSummary = {
 	id: string;
 	title: string;
 	slug: string;
+	type: PostType;
 	excerpt: string;
 	thumbnail_url?: string;
 	created_at: Date;
@@ -70,3 +75,41 @@ export function postPath(
 ): string {
 	return style === 'slug' ? slugPostPath(post) : datedPostPath(post);
 }
+
+export type MailTransport = 'binding' | 'cloudflare' | 'smtp';
+export type SmtpTlsMode = 'starttls' | 'implicit' | 'off';
+
+export type MailStatus = {
+	configured: boolean;
+	transport: MailTransport | null;
+	source: 'env' | 'settings' | null;
+	reason?: string;
+};
+
+export type MailSettings = {
+	enabled: boolean;
+	transport: MailTransport;
+	fromAddress: string;
+	fromName: string;
+	cloudflareAccountId: string;
+	smtpHost: string;
+	smtpPort: number;
+	smtpTls: SmtpTlsMode;
+	smtpUsername: string;
+	hasCloudflareApiToken: boolean;
+	hasSmtpPassword: boolean;
+	secretsReadable: boolean;
+	bindingAvailable: boolean;
+	envOverride: boolean;
+	status: MailStatus;
+	subscribers: { active: number; pending: number };
+	outbox: { pending: number; failed: number };
+};
+
+export type SubscriberRow = {
+	id: string;
+	email: string;
+	status: 'pending' | 'active';
+	createdAt: string;
+	confirmedAt: string | null;
+};

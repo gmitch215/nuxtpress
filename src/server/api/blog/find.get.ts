@@ -3,7 +3,14 @@ import { db } from 'hub:db';
 import { kv } from 'hub:kv';
 import { blogPosts, users } from '~/server/db/schema';
 import { ensureDatabase } from '~/server/utils/db';
-import { parseTags, rowToAuthor } from '~/server/utils/posts';
+import {
+	parseCached,
+	parseMedia,
+	parseTags,
+	publicThumbnailUrl,
+	rowToAuthor
+} from '~/server/utils/posts';
+import { SLUG_RE } from '~/shared/schemas';
 import type { BlogPost } from '~/shared/types';
 
 export default defineEventHandler(async (event) => {
@@ -11,6 +18,11 @@ export default defineEventHandler(async (event) => {
 	const { slug, year, month, day } = getQuery(event);
 	if (!slug || typeof slug !== 'string' || Array.isArray(slug)) {
 		throw createError({ statusCode: 400, statusMessage: 'No valid slug provided' });
+	}
+
+	// slugs only ever match this shape; anything else is a miss (and never becomes a kv key)
+	if (!SLUG_RE.test(slug)) {
+		throw createError({ statusCode: 404, statusMessage: 'Post not found' });
 	}
 
 	// date is optional: omitting it resolves the newest post with that slug
@@ -54,17 +66,11 @@ export default defineEventHandler(async (event) => {
 	}
 
 	const cacheKey = hasDate
-		? `nuxtpress:blog_post:v3:${slug}:${year0}:${month0}:${day0}`
-		: `nuxtpress:blog_post:v3:${slug}:latest`;
+		? `nuxtpress:blog_post:v4:${slug}:${year0}:${month0}:${day0}`
+		: `nuxtpress:blog_post:v4:${slug}:latest`;
 
-	const cached = await kv.get(cacheKey);
-	if (cached && typeof cached === 'string') {
-		try {
-			return JSON.parse(cached);
-		} catch {
-			await kv.del(cacheKey);
-		}
-	}
+	const cached = parseCached<BlogPost>(await kv.get(cacheKey));
+	if (cached) return cached;
 
 	const dateFilter = hasDate
 		? [
@@ -78,6 +84,8 @@ export default defineEventHandler(async (event) => {
 			id: blogPosts.id,
 			title: blogPosts.title,
 			slug: blogPosts.slug,
+			type: blogPosts.type,
+			media: blogPosts.media,
 			content: blogPosts.content,
 			thumbnail: blogPosts.thumbnail,
 			thumbnailUrl: blogPosts.thumbnailUrl,
@@ -108,10 +116,16 @@ export default defineEventHandler(async (event) => {
 		id: row.id,
 		title: row.title,
 		slug: row.slug,
+		type: row.type,
+		media: parseMedia(row.media),
 		content: row.content,
 		created_at: new Date(row.createdAt),
 		updated_at: new Date(row.updatedAt),
-		thumbnail_url: row.thumbnailUrl || (row.thumbnail ? `/thumbnails/${row.id}` : undefined),
+		thumbnail_url: publicThumbnailUrl({
+			...row,
+			hasThumbnail: !!row.thumbnail,
+			firstMediaKey: parseMedia(row.media)[0]?.key
+		}),
 		tags: parseTags(row.tags),
 		author_id: row.authorId ?? null,
 		author: author ? { ...author, bio: row.authorBio ?? null } : null

@@ -3,6 +3,7 @@ import { db } from 'hub:db';
 import { users } from '~/server/db/schema';
 import { requireAuthed } from '~/server/utils/auth';
 import { ensureDatabase } from '~/server/utils/db';
+import { invalidateAuthor } from '~/server/utils/posts';
 import { profileUpdateSchema } from '~/shared/schemas';
 
 export default defineEventHandler(async (event) => {
@@ -38,5 +39,6 @@ export default defineEventHandler(async (event) => {
 	}
 
 	await db.update(users).set(updates).where(eq(users.id, me.id));
+	await invalidateAuthor(me.id);
 	return { ok: true };
 });
