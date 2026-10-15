@@ -48,7 +48,7 @@
     "marked": "^18.1.1",
     "nuxt": "^4.6.1",
     "nuxt-auth-utils": "^0.5.31",
-    "nuxt-schema-org": "^6.4.3",
+    "nuxt-schema-org": "^7.0.0",
     "nuxt-viewport": "^2.6.1",
     "xmlbuilder2": "^4.0.3",
     "zod": "^4.6.7"
