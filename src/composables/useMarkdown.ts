@@ -1,35 +1,29 @@
-import { gitHubEmojis } from '@tiptap/extension-emoji';
-import hljs from 'highlight.js';
-import { marked } from 'marked';
+import { markdownToHtml } from '~/shared/markdown';
 
-// Extension to support ++underline++ syntax
-const underlineExtension = {
-	name: 'underline',
-	level: 'inline',
-	start(src: string) {
-		return src.match(/\+\+/)?.index;
-	},
-	tokenizer(src: string) {
-		const rule = /^\+\+([^\+]+)\+\+/;
-		const match = rule.exec(src);
-		if (match) {
-			return {
-				type: 'underline',
-				raw: match[0],
-				text: match[1]
-			};
+const SHORTCODE_RE = /:([a-zA-Z0-9_+-]+):/g;
+
+// the emoji dataset is about 800 KB, so it loads only when a post actually has a :shortcode:
+let shortcodes: Map<string, string> | null = null;
+let loading: Promise<void> | null = null;
+const emojisReady = shallowRef(false);
+
+function loadEmojis(): Promise<void> {
+	loading ??= import('@tiptap/extension-emoji').then(({ gitHubEmojis }) => {
+		const map = new Map<string, string>();
+		for (const item of gitHubEmojis) {
+			if (!item.emoji) continue;
+			for (const code of item.shortcodes) if (!map.has(code)) map.set(code, item.emoji);
 		}
-	},
-	renderer(token: any) {
-		return `<u>${token.text}</u>`;
-	}
-};
+		shortcodes = map;
+		emojisReady.value = true;
+	});
+	return loading;
+}
 
 function convertEmojis(content: string): string {
-	return content.replace(/:([a-zA-Z0-9_+-]+):/g, (match, shortcode) => {
-		const emojiItem = gitHubEmojis.find((item) => item.shortcodes.includes(shortcode));
-		return emojiItem?.emoji || match;
-	});
+	if (!shortcodes) return content;
+	const map = shortcodes;
+	return content.replace(SHORTCODE_RE, (match, code: string) => map.get(code) ?? match);
 }
 
 /**
@@ -43,32 +37,16 @@ function demoteHeadings(html: string): string {
 }
 
 export function useMarkdown() {
-	const renderMarkdown = (content: string): string => {
-		content = convertEmojis(content);
-		const renderer = new marked.Renderer();
-
-		renderer.code = ({ text, lang }) => {
-			const validLanguage = lang && hljs.getLanguage(lang) ? lang : 'plaintext';
-
-			try {
-				const highlighted = hljs.highlight(text, { language: validLanguage }).value;
-				return `<pre><code class="hljs language-${validLanguage}">${highlighted}</code></pre>`;
-			} catch (e) {
-				console.error('Syntax highlighting error:', e);
-				return `<pre><code class="hljs">${text}</code></pre>`;
-			}
-		};
-
-		marked.use({ extensions: [underlineExtension] });
-
-		const html = marked(content, {
-			renderer: renderer,
-			breaks: true,
-			gfm: true
-		});
-
-		return typeof html === 'string' ? demoteHeadings(html) : '';
+	// await this before rendering so server and client render the same html for a given post
+	const prepareMarkdown = async (content: string) => {
+		if (!shortcodes && new RegExp(SHORTCODE_RE.source).test(content)) await loadEmojis();
 	};
 
-	return { renderMarkdown };
+	const renderMarkdown = (content: string): string => {
+		// read for its dependency: a render that ran before the dataset arrived runs again
+		void emojisReady.value;
+		return demoteHeadings(markdownToHtml(convertEmojis(content)));
+	};
+
+	return { renderMarkdown, prepareMarkdown };
 }

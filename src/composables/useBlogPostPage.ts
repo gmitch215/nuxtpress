@@ -99,14 +99,23 @@ export async function useBlogPostPage(
 
 	// the guard above throws on null, so the loaded post is non-null past this point
 	const post = data as Ref<BlogPost | null>;
+	const loaded = data.value as BlogPost;
+
+	// emoji shortcodes need their dataset before the first render so hydration matches the server
+	await useMarkdown().prepareMarkdown(loaded.content);
+
+	// Nuxt clears an asyncData result when the page scope is disposed, which can land before the
+	// head is resolved on the server and while the page tears down on the client. The head and
+	// canonical path read this instead, so they never see the cleared value.
+	const current = computed(() => post.value ?? loaded);
 
 	const primaryPath = computed(() =>
-		style.value === 'slug' ? slugPostPath(post.value!) : datedPostPath(post.value!)
+		style.value === 'slug' ? slugPostPath(current.value) : datedPostPath(current.value)
 	);
 
 	// only an await written directly in setup gets its Nuxt context restored by the compiler, so
 	// the head composables below have to be run explicitly against the captured instance
-	nuxtApp.runWithContext(() => applyBlogPostSeo(seo, post, primaryPath));
+	nuxtApp.runWithContext(() => applyBlogPostSeo(seo, current, primaryPath));
 
 	return { post, slug, primaryPath };
 }

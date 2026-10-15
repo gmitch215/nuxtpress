@@ -1,14 +1,22 @@
+@use 'sass:meta';
+
 @layer components {
 	@media (prefers-color-scheme: light) {
-		@import 'highlight.js/styles/github.css' layer(syntax-light);
+		@layer syntax-light {
+			@include meta.load-css('highlight.js/styles/github.css');
+		}
 	}
 
 	@media (prefers-color-scheme: dark) {
-		@import 'highlight.js/styles/github-dark.css' layer(syntax-dark);
+		@layer syntax-dark {
+			@include meta.load-css('highlight.js/styles/github-dark.css');
+		}
 	}
 
-	:is(.dark *) {
-		@import 'highlight.js/styles/github-dark.css' layer(syntax-dark-class);
+	@layer syntax-dark-class {
+		:is(.dark *) {
+			@include meta.load-css('highlight.js/styles/github-dark.css');
+		}
 	}
 }
 
