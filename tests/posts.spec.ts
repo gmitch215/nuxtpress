@@ -147,4 +147,76 @@ test.describe('post creation, viewing, deletion', () => {
 			await deletePost(request, post.id);
 		}
 	});
+
+	test('escape on a post goes back to the home page', async ({ page, request }) => {
+		const post = await createPost(request, {
+			title: 'Escape To Home',
+			slug: `escape-${Date.now()}`,
+			content: 'A post whose page should hand Escape to the router and return to the home page.'
+		});
+
+		try {
+			await page.goto(`/${post.slug}`);
+			await expect(page.getByRole('heading', { name: 'Escape To Home' })).toBeVisible();
+			await waitForHydration(page);
+			await page.keyboard.press('Escape');
+			await expect(page).toHaveURL(/\/$/);
+		} finally {
+			await deletePost(request, post.id);
+		}
+	});
+
+	test('escape closes the editor instead of leaving the post', async ({
+		context,
+		page,
+		request
+	}) => {
+		const post = await createPost(request, {
+			title: 'Escape Closes Editor',
+			slug: `escape-editor-${Date.now()}`,
+			content: 'A post whose open editor dialog should take Escape before the page does.'
+		});
+		await loginContext(context);
+
+		try {
+			await page.goto(`/${post.slug}`);
+			await expect(page.getByRole('heading', { name: 'Escape Closes Editor' })).toBeVisible();
+			await waitForHydration(page);
+			await page.locator('header button').nth(0).click();
+			await expect(page.getByRole('dialog')).toBeVisible();
+
+			await page.keyboard.press('Escape');
+			await expect(page.getByRole('dialog')).toBeHidden();
+			await expect(page).toHaveURL(new RegExp(`${post.slug}$`));
+		} finally {
+			await deletePost(request, post.id);
+		}
+	});
+
+	test('a post with only an image shows no read time', async ({ request }) => {
+		const pixel =
+			'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+		const stamp = Date.now();
+		const imageOnly = await createPost(request, {
+			title: 'Image Only Post',
+			slug: `read-image-${stamp}`,
+			content: `![](${pixel}) ![](${pixel}) ![](${pixel})`
+		});
+		const written = await createPost(request, {
+			title: 'Written Post',
+			slug: `read-text-${stamp}`,
+			content: `A short written post with a picture. ![The harbor](${pixel})`
+		});
+
+		try {
+			const bare = await (await request.get(`/${imageOnly.slug}`)).text();
+			expect(bare).not.toContain('min. read');
+
+			const text = await (await request.get(`/${written.slug}`)).text();
+			expect(text).toContain('1 min. read');
+		} finally {
+			await deletePost(request, imageOnly.id);
+			await deletePost(request, written.id);
+		}
+	});
 });

@@ -67,7 +67,7 @@
 			</div>
 
 			<span
-				v-if="post.type === 'article'"
+				v-if="post.type === 'article' && readMinutes"
 				:style="`color: ${settings.themeColor || $config.public.themeColor}`"
 				>{{ readMinutes }} min. read</span
 			>
@@ -129,6 +129,7 @@
 
 <script setup lang="ts">
 import { mediaUrl } from '~/shared/media';
+import { readingMinutes } from '~/shared/text';
 import { formatDate, type BlogPost } from '~/shared/types';
 
 const props = defineProps<{ post: BlogPost }>();
@@ -141,7 +142,26 @@ const router = useRouter();
 const toast = useToast();
 const editorOpen = ref(false);
 
-const readMinutes = computed(() => Math.max(1, Math.floor(props.post.content.length / 1190)));
+// Escape leaves the post for the home page unless something else already took it: typing in a
+// field, or an open dialog, menu or list (which close on Escape themselves). Never prevent default
+// here, or the dialog library treats the key as handled and stays open.
+function leaveOnEscape(event: KeyboardEvent) {
+	if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return;
+	if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+	const target = event.target as HTMLElement | null;
+	if (
+		target?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')
+	) {
+		return;
+	}
+	const open = '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]';
+	if (document.querySelector(open)) return;
+	router.push('/');
+}
+onMounted(() => document.addEventListener('keydown', leaveOnEscape));
+onBeforeUnmount(() => document.removeEventListener('keydown', leaveOnEscape));
+
+const readMinutes = computed(() => readingMinutes(props.post.content));
 
 const thumbnailFailed = ref(false);
 watch(

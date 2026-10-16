@@ -17,7 +17,7 @@ import {
 } from '../src/shared/media';
 import { rowsOf } from '../src/shared/rows';
 import { sanitizeHtml } from '../src/shared/sanitize';
-import { excerptOf, markdownToText } from '../src/shared/text';
+import { excerptOf, markdownToText, readingMinutes } from '../src/shared/text';
 import { datedPostPath, formatDate, postPath, slugPostPath } from '../src/shared/types';
 
 const KEY = `media/${'a'.repeat(32)}/${'b'.repeat(32)}.png`;
@@ -53,6 +53,33 @@ test.describe('text', () => {
 		expect(excerpt.slice(0, -3).endsWith('word')).toBe(true);
 		expect(excerptOf('short text', 50)).toBe('short text');
 		expect(excerptOf('', 50)).toBe('');
+	});
+});
+
+test.describe('readingMinutes', () => {
+	const dataImage = `data:image/png;base64,${'A'.repeat(336_000)}`;
+
+	test('text counts at about 1,190 characters a minute', () => {
+		expect(readingMinutes('short note')).toBe(1);
+		expect(readingMinutes('x'.repeat(1190 * 4 + 10))).toBe(4);
+	});
+
+	test('an inline image adds nothing, whatever its size', () => {
+		expect(readingMinutes(`A short caption.\n\n![](${dataImage})`)).toBe(1);
+		expect(readingMinutes(`![A photo of the harbor](${dataImage})`)).toBe(1);
+		expect(readingMinutes(`before <img alt="x" src="${dataImage}"> after`)).toBe(1);
+	});
+
+	test('only the caption of an image is read', () => {
+		const caption = 'c'.repeat(1190 * 2);
+		expect(readingMinutes(`![${caption}](${dataImage})`)).toBe(2);
+	});
+
+	test('nothing readable means no estimate', () => {
+		expect(readingMinutes('')).toBeNull();
+		expect(readingMinutes('   \n ')).toBeNull();
+		expect(readingMinutes(`![](${dataImage})`)).toBeNull();
+		expect(readingMinutes(`<img src="${dataImage}">`)).toBeNull();
 	});
 });
 

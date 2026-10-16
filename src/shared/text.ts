@@ -32,3 +32,15 @@ export function excerptOf(markdown: string, max = 200): string {
 	const lastSpace = cut.lastIndexOf(' ');
 	return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}...`;
 }
+
+/**
+ * Minutes to read a post's text. Images count only through their caption (the alt text), because
+ * an inline data URL runs to hundreds of thousands of characters. `null` when nothing is readable.
+ */
+export function readingMinutes(markdown: string): number | null {
+	const text = (markdown || '')
+		.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+		.replace(/<img\b[^>]*>/gi, '')
+		.trim();
+	return text ? Math.max(1, Math.floor(text.length / 1190)) : null;
+}
