@@ -21,7 +21,7 @@
     "dev:setup-test": "bun scripts/reset-test-data.mjs .data-setup-test && NUXT_PASSWORD= NUXTPRESS_DATA_DIR=.data-setup-test NUXTPRESS_BUILD_DIR=.nuxt-setup-test NUXT_IGNORE_LOCK=1 bunx nuxi dev --no-restart --host 127.0.0.1 --port 8788 --dotenv .config/setup-test.env"
   },
   "overrides": {
-    "typescript": "5.9.3"
+    "typescript": "7.0.2"
   },
   "dependencies": {
     "@cloudflare/workers-types": "^5.20261016.1",
@@ -72,7 +72,7 @@
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "sass": "^1.105.2",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.0",
     "vue-tsc": "^3.3.13",
     "wrangler": "^4.151.0"
   },
