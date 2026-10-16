@@ -336,6 +336,7 @@ test.describe('post type surfaces', () => {
 	});
 
 	test('the feed carries enclosures for video and music and figures for slideshows', async ({
+		baseURL,
 		request
 	}) => {
 		const video = await uploadVideo(request);
@@ -359,9 +360,7 @@ test.describe('post type surfaces', () => {
 		}
 		try {
 			const feed = await (await request.get('/feed.xml')).text();
-			expect(feed).toContain(
-				`rel="enclosure" type="video/webm" href="http://127.0.0.1:8787${video.url}"`
-			);
+			expect(feed).toContain(`rel="enclosure" type="video/webm" href="${baseURL}${video.url}"`);
 			expect(feed).toContain(`rel="enclosure" type="audio/wav"`);
 			expect(feed).toContain('&lt;figure&gt;');
 			expect(feed).toContain('only slide');
