@@ -228,6 +228,8 @@ Fenced code blocks are highlighted for the 36 languages in highlight.js's common
 - **Edit**: Open a post while logged in and click the pencil next to the title
 - **Delete**: Open a post and click the bin next to the title
 - **View**: Every post is listed on the home page, with archives by year, month and day
+- **Leave**: Press Escape on a post to return to the home page. Escape still closes an open editor or search window first
+- **Read time**: Articles show an estimated read time counted from the text. An image counts only through its caption, and a post with no text shows no estimate
 
 #### Customizing Settings
 
