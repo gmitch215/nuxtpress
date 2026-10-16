@@ -35,7 +35,9 @@ export type AdminUser = PublicUser & {
 };
 
 export function formatDate(date: Date) {
+	// UTC on purpose: the server renders this and the browser hydrates it, and they only agree on UTC
 	return new Date(date).toLocaleDateString('en-US', {
+		timeZone: 'UTC',
 		year: 'numeric',
 		month: 'long',
 		day: 'numeric'

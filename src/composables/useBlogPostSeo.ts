@@ -68,14 +68,19 @@ export function applyBlogPostSeo(
 	});
 
 	useHead({
-		link: [
-			{ rel: 'canonical', href: canonical },
-			{
-				rel: 'preload',
-				as: 'image',
-				href: () => post.value?.thumbnail_url || '',
-				fetchpriority: 'high'
-			}
+		// a post without a thumbnail has nothing to preload; an empty href is an invalid link
+		link: () => [
+			{ rel: 'canonical', href: canonical.value },
+			...(post.value?.thumbnail_url
+				? [
+						{
+							rel: 'preload' as const,
+							as: 'image' as const,
+							href: post.value.thumbnail_url,
+							fetchpriority: 'high' as const
+						}
+					]
+				: [])
 		],
 		meta: [
 			{ property: 'citation_title', content: () => post.value?.title || '' },

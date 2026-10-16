@@ -101,6 +101,32 @@ test.describe('seo and crawler indexability', () => {
 		await deletePost(request, post.id);
 	});
 
+	test('only a post with a thumbnail preloads an image', async ({ request }) => {
+		const stamp = Date.now();
+		const bare = await createPost(request, {
+			title: 'Bare Post',
+			slug: `seo-bare-${stamp}`,
+			content: BODY
+		});
+		const hero = await createPost(request, {
+			title: 'Hero Post',
+			slug: `seo-hero-${stamp}`,
+			content: BODY,
+			thumbnail_url: 'https://example.com/hero.png'
+		});
+
+		try {
+			const without = await (await request.get(`/${bare.slug}`)).text();
+			expect(without).not.toMatch(/<link[^>]*rel="preload"[^>]*as="image"/);
+
+			const withHero = await (await request.get(`/${hero.slug}`)).text();
+			expect(withHero).toContain('rel="preload" as="image" href="https://example.com/hero.png"');
+		} finally {
+			await deletePost(request, bare.id);
+			await deletePost(request, hero.id);
+		}
+	});
+
 	test('sitemap lists posts and archives but never admin routes', async ({ request }) => {
 		const slug = `seo-sitemap-${Date.now()}`;
 		const post = await createPost(request, { title: 'Sitemap Post', slug, content: BODY });
@@ -113,7 +139,7 @@ test.describe('seo and crawler indexability', () => {
 		const d = new Date(post.created_at);
 		expect(xml).toContain(`/${d.getUTCFullYear()}<`.replace('<', ''));
 		expect(xml).not.toContain('/admin/users');
-		expect(xml).not.toContain('<loc>http://127.0.0.1:8787/setup</loc>');
+		expect(xml).not.toContain('/setup</loc>');
 		expect(xml).not.toContain('/profile</loc>');
 
 		await deletePost(request, post.id);

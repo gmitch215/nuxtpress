@@ -18,7 +18,7 @@ import {
 import { rowsOf } from '../src/shared/rows';
 import { sanitizeHtml } from '../src/shared/sanitize';
 import { excerptOf, markdownToText } from '../src/shared/text';
-import { datedPostPath, postPath, slugPostPath } from '../src/shared/types';
+import { datedPostPath, formatDate, postPath, slugPostPath } from '../src/shared/types';
 
 const KEY = `media/${'a'.repeat(32)}/${'b'.repeat(32)}.png`;
 const PIXEL =
@@ -125,6 +125,23 @@ test.describe('media paths', () => {
 		const item = (caption?: string) => ({ key: KEY, mime: 'image/png', size: 1, caption });
 		expect(contentFromMedia([item(' one '), item(), item('  '), item('two')])).toBe('one\n\ntwo');
 		expect(contentFromMedia([])).toBe('');
+	});
+});
+
+test.describe('formatDate', () => {
+	test('a date reads the same in every time zone', () => {
+		const zone = process.env.TZ;
+		try {
+			// 03:30 UTC is still the previous evening in the Americas, where a local format would differ
+			for (const tz of ['UTC', 'America/Los_Angeles', 'Pacific/Auckland']) {
+				process.env.TZ = tz;
+				expect(formatDate(new Date('2026-10-16T03:30:00Z')), tz).toBe('October 16, 2026');
+				expect(formatDate(new Date('2026-12-31T23:59:59Z')), tz).toBe('December 31, 2026');
+			}
+		} finally {
+			if (zone === undefined) delete process.env.TZ;
+			else process.env.TZ = zone;
+		}
 	});
 });
 
