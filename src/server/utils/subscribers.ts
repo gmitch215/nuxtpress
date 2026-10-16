@@ -28,7 +28,7 @@ export const DRAIN_BATCH = 25;
 export type DrainResult = { sent: number; retried: number; failed: number; remaining: number };
 
 export async function siteOrigin(): Promise<string> {
-	const configured = useRuntimeConfig().public.site_url;
+	const configured = runtimeConfig().public.site_url;
 	if (configured) return configured.replace(/\/+$/, '');
 	return ((await kv.get<string>(ORIGIN_KV_KEY)) || '').replace(/\/+$/, '');
 }
@@ -39,16 +39,14 @@ export async function siteOrigin(): Promise<string> {
  */
 export async function rememberOrigin(event: H3Event): Promise<void> {
 	const origin = getRequestURL(event).origin;
-	if (!useRuntimeConfig().public.site_url && (await kv.get<string>(ORIGIN_KV_KEY)) !== origin) {
+	if (!runtimeConfig().public.site_url && (await kv.get<string>(ORIGIN_KV_KEY)) !== origin) {
 		await kv.set(ORIGIN_KV_KEY, origin);
 	}
 }
 
 async function siteName(): Promise<string> {
 	return (
-		(await kv.get<string>('nuxtpress:setting:name')) ||
-		useRuntimeConfig().public.name ||
-		'NuxtPress'
+		(await kv.get<string>('nuxtpress:setting:name')) || runtimeConfig().public.name || 'NuxtPress'
 	);
 }
 
@@ -100,15 +98,22 @@ export async function subscribe(
 	}
 
 	const id = existing?.id ?? crypto.randomUUID().replace(/-/g, '');
-	if (!existing) {
-		await db.insert(subscribers).values({ id, email: address, createdAt: now });
-	}
-
+	// build the message before touching the table, so a missing secret leaves nothing behind
 	const message = renderConfirmEmail({
 		siteName: await siteName(),
 		confirmUrl: await confirmUrl(origin, id)
 	});
-	await sendMail(env, { to: address, ...message });
+
+	if (!existing) {
+		await db.insert(subscribers).values({ id, email: address, createdAt: now });
+	}
+	try {
+		await sendMail(env, { to: address, ...message });
+	} catch (error) {
+		// a new address that never got its email is not a pending subscriber
+		if (!existing) await db.delete(subscribers).where(eq(subscribers.id, id));
+		throw error;
+	}
 	await db.update(subscribers).set({ confirmationSentAt: now }).where(eq(subscribers.id, id));
 	return 'confirmation-sent';
 }
@@ -178,7 +183,7 @@ export async function listSubscribers(options: {
 
 /** Walks the table by primary key, so memory and the rows each query reads stay bounded at any size. */
 export async function* exportSubscriberPages(): AsyncGenerator<SubscriberRow[]> {
-	const size = Math.max(1, Number(useRuntimeConfig().mail.exportPageSize) || 1000);
+	const size = Math.max(1, Number(runtimeConfig().mail.exportPageSize) || 1000);
 	let after = '';
 	for (;;) {
 		const rows = await db

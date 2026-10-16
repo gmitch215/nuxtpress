@@ -310,8 +310,13 @@ test.describe('subscribe flow', () => {
 
 	test('a confirmation that cannot be sent returns a 502', async ({ request }) => {
 		await enableMail(request);
-		const res = await subscribe(request, `broken-${Date.now()}@fail.invalid`);
+		const email = `broken-${Date.now()}@fail.invalid`;
+		const res = await subscribe(request, email);
 		expect(res.status()).toBe(502);
+
+		// the address is not left behind as a pending subscriber that never received anything
+		const listed = await request.get('/api/admin/subscribers', { params: { search: email } });
+		expect((await listed.json()).rows).toHaveLength(0);
 	});
 
 	test('unsubscribe works as an RFC 8058 one-click POST and is idempotent', async ({ request }) => {

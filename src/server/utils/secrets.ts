@@ -1,3 +1,5 @@
+import { firstSecret, MIN_SECRET_LENGTH } from '~/shared/secret';
+
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -44,9 +46,18 @@ async function deriveKey(
 	);
 }
 
+/**
+ * Same sources as nuxt-auth-utils, so the signing key matches the one that works for logins. The
+ * environment is read first because it is what a deployed Worker has at request time.
+ */
 export function sessionSecret(): string {
-	const secret = useRuntimeConfig().session?.password;
-	if (!secret || secret.length < 32) {
+	const fromEnv = process.env.NUXT_SESSION_PASSWORD;
+	const fromConfig = (runtimeConfig().session as { password?: string } | undefined)?.password;
+	const secret = firstSecret(fromEnv, fromConfig);
+	if (!secret) {
+		console.error(
+			`NUXT_SESSION_PASSWORD must be at least ${MIN_SECRET_LENGTH} characters; found ${fromEnv?.length ?? 0} in the environment and ${fromConfig?.length ?? 0} in the runtime config`
+		);
 		throw createError({ statusCode: 500, statusMessage: 'Session secret is not configured' });
 	}
 	return secret;

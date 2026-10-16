@@ -17,6 +17,7 @@ import {
 } from '../src/shared/media';
 import { rowsOf } from '../src/shared/rows';
 import { sanitizeHtml } from '../src/shared/sanitize';
+import { firstSecret, MIN_SECRET_LENGTH } from '../src/shared/secret';
 import { excerptOf, markdownToText, readingMinutes } from '../src/shared/text';
 import { datedPostPath, formatDate, postPath, slugPostPath } from '../src/shared/types';
 
@@ -152,6 +153,22 @@ test.describe('media paths', () => {
 		const item = (caption?: string) => ({ key: KEY, mime: 'image/png', size: 1, caption });
 		expect(contentFromMedia([item(' one '), item(), item('  '), item('two')])).toBe('one\n\ntwo');
 		expect(contentFromMedia([])).toBe('');
+	});
+});
+
+test.describe('firstSecret', () => {
+	const good = 'g'.repeat(MIN_SECRET_LENGTH);
+
+	test('takes the first candidate that is long enough', () => {
+		expect(firstSecret(good, 'x'.repeat(40))).toBe(good);
+		expect(firstSecret('short', good)).toBe(good);
+		expect(firstSecret(undefined, null, '', good)).toBe(good);
+	});
+
+	test('a candidate one character short is refused', () => {
+		expect(firstSecret('s'.repeat(MIN_SECRET_LENGTH - 1))).toBeNull();
+		expect(firstSecret()).toBeNull();
+		expect(firstSecret(undefined, '')).toBeNull();
 	});
 });
 
