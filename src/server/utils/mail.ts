@@ -85,7 +85,7 @@ export async function readStoredMail(): Promise<StoredMail> {
 async function readSecrets(): Promise<Secrets | null> {
 	const sealed = await readJson<SealedSecret>(MAIL_SECRETS_KV_KEY);
 	if (!sealed) return {};
-	const opened = await openSecret(sealed, sessionSecret());
+	const opened = await openSecret(sealed, await sessionSecret());
 	if (opened === null) return null;
 	try {
 		return JSON.parse(opened) as Secrets;
@@ -118,7 +118,7 @@ export async function saveMailSettings(input: MailSettingsInput): Promise<void> 
 		if (newPassword) secrets.smtpPassword = newPassword;
 		await kv.set(
 			MAIL_SECRETS_KV_KEY,
-			JSON.stringify(await sealSecret(JSON.stringify(secrets), sessionSecret()))
+			JSON.stringify(await sealSecret(JSON.stringify(secrets), await sessionSecret()))
 		);
 	}
 }

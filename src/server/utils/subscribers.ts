@@ -51,7 +51,7 @@ async function siteName(): Promise<string> {
 }
 
 export async function confirmUrl(origin: string, id: string): Promise<string> {
-	const token = await signToken('confirm', id, sessionSecret());
+	const token = await signToken('confirm', id, await sessionSecret());
 	return `${origin}/subscribe/confirm?id=${id}&token=${token}`;
 }
 
@@ -59,7 +59,7 @@ export async function unsubscribeUrls(
 	origin: string,
 	id: string
 ): Promise<{ page: string; oneClick: string }> {
-	const token = await signToken('unsubscribe', id, sessionSecret());
+	const token = await signToken('unsubscribe', id, await sessionSecret());
 	return {
 		page: `${origin}/unsubscribe?id=${id}&token=${token}`,
 		oneClick: `${origin}/api/subscribers/unsubscribe?id=${id}&token=${token}`
@@ -71,7 +71,7 @@ export async function checkLink(
 	id: string,
 	token: string
 ): Promise<boolean> {
-	return verifyToken(purpose, id, token, sessionSecret());
+	return verifyToken(purpose, id, token, await sessionSecret());
 }
 
 // #region subscribers

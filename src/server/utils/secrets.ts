@@ -1,4 +1,5 @@
-import { firstSecret, MIN_SECRET_LENGTH } from '~/shared/secret';
+import { MIN_SECRET_LENGTH } from '~/shared/secret';
+import { sessionPassword } from './session-password';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -46,17 +47,12 @@ async function deriveKey(
 	);
 }
 
-/**
- * Same sources as nuxt-auth-utils, so the signing key matches the one that works for logins. The
- * environment is read first because it is what a deployed Worker has at request time.
- */
-export function sessionSecret(): string {
-	const fromEnv = process.env.NUXT_SESSION_PASSWORD;
-	const fromConfig = (runtimeConfig().session as { password?: string } | undefined)?.password;
-	const secret = firstSecret(fromEnv, fromConfig);
+/** The key for seals and signed links: the same password the sessions use. */
+export async function sessionSecret(): Promise<string> {
+	const secret = await sessionPassword();
 	if (!secret) {
 		console.error(
-			`NUXT_SESSION_PASSWORD must be at least ${MIN_SECRET_LENGTH} characters; found ${fromEnv?.length ?? 0} in the environment and ${fromConfig?.length ?? 0} in the runtime config`
+			`no session password: NUXT_SESSION_PASSWORD is unset or shorter than ${MIN_SECRET_LENGTH} characters and the one kept in KV could not be read`
 		);
 		throw createError({ statusCode: 500, statusMessage: 'Session secret is not configured' });
 	}
