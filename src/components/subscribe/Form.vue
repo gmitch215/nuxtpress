@@ -4,14 +4,14 @@
 		@submit.prevent="submit"
 	>
 		<label
-			for="subscribe-email"
+			:for="inputId"
 			class="text-xs text-gray-400 sm:text-sm"
 		>
 			Get New Posts by Email
 		</label>
 		<div class="flex gap-2">
 			<UInput
-				id="subscribe-email"
+				:id="inputId"
 				v-model="email"
 				type="email"
 				name="email"
@@ -52,6 +52,7 @@
 </template>
 
 <script setup lang="ts">
+const inputId = useId();
 const email = ref('');
 const website = ref('');
 const loading = ref(false);

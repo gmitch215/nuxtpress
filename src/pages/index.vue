@@ -186,7 +186,7 @@
 	</UModal>
 	<UModal
 		v-model:open="feedOpen"
-		title="RSS Feed"
+		title="Subscribe"
 		class="min-w-120"
 	>
 		<template #body>
@@ -218,6 +218,10 @@
 						View RSS Feed
 					</UButton>
 				</div>
+				<template v-if="settings.subscriptions">
+					<USeparator class="my-2" />
+					<SubscribeForm />
+				</template>
 			</div>
 		</template>
 	</UModal>

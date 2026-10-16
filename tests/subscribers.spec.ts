@@ -32,6 +32,33 @@ test.describe('subscribe form', () => {
 		await expect(page.getByLabel('Get New Posts by Email')).toBeVisible();
 	});
 
+	test('the RSS window carries the form for visitors and signed-in users', async ({
+		context,
+		page,
+		request
+	}) => {
+		await enableMail(request);
+		const email = uniqueEmail('rss');
+		await page.setExtraHTTPHeaders({ 'x-forwarded-for': uniqueIp() });
+
+		const openRssWindow = async () => {
+			await page.goto('/');
+			await waitForHydration(page);
+			await page.locator('button:has([class*="mdi:rss"])').click();
+			return page.getByRole('dialog', { name: 'Subscribe' });
+		};
+
+		const visitor = await openRssWindow();
+		await visitor.getByPlaceholder('you@example.com').fill(email);
+		await visitor.getByRole('button', { name: 'Subscribe' }).click();
+		await expect(visitor.getByText('Check your email to confirm your subscription.')).toBeVisible();
+		expect((await readSink(request)).some((m) => m.to === email)).toBe(true);
+
+		await loginContext(context);
+		const admin = await openRssWindow();
+		await expect(admin.getByPlaceholder('you@example.com')).toBeVisible();
+	});
+
 	test('a visitor subscribes, confirms from the email and unsubscribes', async ({
 		page,
 		request

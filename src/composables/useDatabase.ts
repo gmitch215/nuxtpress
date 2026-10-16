@@ -84,9 +84,12 @@ export type SettingsState = {
 
 export function useSettings() {
 	const settings = useState<SettingsState>('blog-settings', () => ({}));
+	// the global $fetch drops the Cloudflare bindings during server rendering, which made the
+	// EMAIL binding invisible to the handler and baked subscriptions: false into every page
+	const requestFetch = useRequestFetch();
 
 	const fetchSettings = async () => {
-		const res = await $fetch<SettingsState>('/api/settings', {
+		const res = await requestFetch<SettingsState>('/api/settings', {
 			method: 'GET'
 		});
 
