@@ -290,7 +290,7 @@ Each run is one Worker request. With nothing queued, a `mail:drain` run reads at
 
 #### Email Subscribers
 
-Readers can subscribe to get an email when you publish a post. The feature is off until email delivery is configured, and the subscribe form only appears once it is.
+Readers can subscribe to get an email when you publish a post. The feature is off until email delivery is configured, and the subscribe form only appears once it is. It sits in the page footer and in the RSS window on the home page, for visitors and signed-in users alike.
 
 Open `/admin/subscribers` as an administrator to configure delivery, send a test email, see the queue, and manage the list. Pick one transport:
 
