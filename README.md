@@ -362,7 +362,7 @@ NuxtPress is a full-stack blogging platform built with:
 
 #### Prerequisites
 
-- [Bun](https://bun.sh/), or Node.js 22.19+ (Nuxt 4 requires 22.19, 24.11, or 26 and up)
+- [Bun](https://bun.sh/), or Node.js 22.22.3+ (Nuxt 4.6 and its SEO modules require 22.22.3, 24.15, or 26 and up)
 - A Cloudflare account, for deployment only. Local development needs no Cloudflare resources
 
 #### Setup
