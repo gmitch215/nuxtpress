@@ -133,7 +133,7 @@ function unconfigured(reason: string, enabled = false): ResolvedMail {
 }
 
 export async function resolveMail(env: MailEnv): Promise<ResolvedMail> {
-	const config = useRuntimeConfig().mail;
+	const config = runtimeConfig().mail;
 	const stored = await readStoredMail();
 	const envSmtp = !!config.smtpHost;
 	const envCloudflare = !envSmtp && !!config.cfApiToken && !!config.cfAccountId;
@@ -212,7 +212,7 @@ export async function mailActive(env: MailEnv): Promise<boolean> {
 export async function describeMail(
 	env: MailEnv
 ): Promise<Omit<MailSettings, 'subscribers' | 'outbox'>> {
-	const config = useRuntimeConfig().mail;
+	const config = runtimeConfig().mail;
 	const stored = await readStoredMail();
 	const secrets = await readSecrets();
 	const resolved = await resolveMail(env);
@@ -247,7 +247,7 @@ export function cloudflareRequest(
 	message: MailMessage
 ): { url: string; headers: Record<string, string>; body: Record<string, unknown> } {
 	return {
-		url: `${useRuntimeConfig().mail.cfApiBase}/accounts/${transport.accountId}/email/sending/send`,
+		url: `${runtimeConfig().mail.cfApiBase}/accounts/${transport.accountId}/email/sending/send`,
 		headers: {
 			Authorization: `Bearer ${transport.token}`,
 			'Content-Type': 'application/json'
@@ -314,7 +314,7 @@ export async function sendMail(env: MailEnv, message: MailMessage): Promise<void
 	}
 	const { transport, from } = mail;
 
-	if (useRuntimeConfig().mail.sink) {
+	if (runtimeConfig().mail.sink) {
 		const to = message.to.toLowerCase();
 		if (to.endsWith('@fail.invalid') || (to.endsWith('@fail-later.invalid') && message.headers)) {
 			throw new MailError('Simulated delivery failure', 'E_DELIVERY_FAILED');

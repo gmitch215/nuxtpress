@@ -13,7 +13,7 @@ async function clientKey(event: Parameters<typeof getRequestHeader>[0]): Promise
 		getRequestHeader(event, 'x-forwarded-for')?.split(',')[0]?.trim() ||
 		getRequestIP(event) ||
 		'unknown';
-	const salt = useRuntimeConfig().analyticsSalt || 'dev-salt';
+	const salt = runtimeConfig().analyticsSalt || 'dev-salt';
 	const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${salt}:${ip}`));
 	return [...new Uint8Array(digest)]
 		.slice(0, 12)

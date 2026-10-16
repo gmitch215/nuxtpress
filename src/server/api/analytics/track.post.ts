@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
 		getRequestHeader(event, 'x-real-ip') ||
 		getRequestHeader(event, 'x-forwarded-for') ||
 		'';
-	const salt = useRuntimeConfig().analyticsSalt || 'dev-salt';
+	const salt = runtimeConfig().analyticsSalt || 'dev-salt';
 	// daily-rotating salted hash; the raw ip and ua are never stored
 	const vid = await visitorId(String(ip).split(',')[0]?.trim() || '', ua, salt, day);
 

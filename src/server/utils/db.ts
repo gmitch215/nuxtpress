@@ -80,7 +80,7 @@ async function ensureColumn(table: string, column: string, definition: string) {
 }
 
 async function legacyAdminSeed() {
-	const config = useRuntimeConfig();
+	const config = runtimeConfig();
 	const password = config.password;
 	if (!password || password === 'password') return;
 

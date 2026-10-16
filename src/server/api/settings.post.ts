@@ -50,7 +50,7 @@ const TEXT_FIELDS = [
 export default defineEventHandler(async (event) => {
 	await requireAdmin(event);
 
-	const config = useRuntimeConfig();
+	const config = runtimeConfig();
 
 	const body = (await readBody(event)) ?? {};
 	for (const key of TEXT_FIELDS) {

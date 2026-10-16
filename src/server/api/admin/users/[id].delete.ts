@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
 	const target = rows[0];
 	if (!target) throw createError({ statusCode: 404, statusMessage: 'User not found' });
 
-	const legacyPassword = useRuntimeConfig().password;
+	const legacyPassword = runtimeConfig().password;
 	const legacyActive = Boolean(legacyPassword) && legacyPassword !== 'password';
 	if (legacyActive && target.username === 'admin') {
 		throw createError({

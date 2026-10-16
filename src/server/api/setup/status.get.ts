@@ -7,7 +7,7 @@ import {
 } from '~/server/utils/db';
 
 export default defineEventHandler(async () => {
-	const cfg = useRuntimeConfig();
+	const cfg = runtimeConfig();
 	const hasLegacyPassword = Boolean(cfg.password) && cfg.password !== 'password';
 	try {
 		await ensureDatabase();

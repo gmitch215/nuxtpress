@@ -12,8 +12,7 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 400, statusMessage: 'Enter a valid email address' });
 	}
 
-	const siteName =
-		(await kv.get<string>('nuxtpress:setting:name')) || useRuntimeConfig().public.name;
+	const siteName = (await kv.get<string>('nuxtpress:setting:name')) || runtimeConfig().public.name;
 	try {
 		await sendMail(cloudflareEnv(event), {
 			to: parsed.data.to,

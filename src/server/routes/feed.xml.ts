@@ -40,7 +40,7 @@ function absolute(origin: string, path: string): string {
 }
 
 export default defineEventHandler(async (event) => {
-	const config = useRuntimeConfig();
+	const config = runtimeConfig();
 
 	try {
 		const cachedFeed = await kv.get<string>(FEED_CACHE_KEY);

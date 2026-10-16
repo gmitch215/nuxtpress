@@ -3,7 +3,7 @@ import { proxyExternalAsset } from '~/server/utils/favicon-proxy';
 import { decodeDataImage, FAVICON_TYPES } from '~/shared/images';
 
 export default defineEventHandler(async (event) => {
-	const config = useRuntimeConfig();
+	const config = runtimeConfig();
 
 	const favicon = await kv.get<string>('nuxtpress:setting:favicon');
 	if (favicon?.startsWith('data:')) {

@@ -33,7 +33,7 @@ const TEXT_KEYS = [
 ] as const;
 
 export default defineEventHandler(async (event) => {
-	const config = useRuntimeConfig();
+	const config = runtimeConfig();
 
 	const [stored, urlStyle, subscriptions, rawMessage] = await Promise.all([
 		Promise.all(TEXT_KEYS.map(async (key) => text(await kv.get(`nuxtpress:setting:${key}`)))),
