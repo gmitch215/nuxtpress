@@ -47,7 +47,7 @@
     "luxon": "^3.7.2",
     "marked": "^18.1.1",
     "nuxt": "^4.6.1",
-    "nuxt-auth-utils": "^0.5.31",
+    "nuxt-auth-utils": "^0.6.0",
     "nuxt-schema-org": "^7.0.1",
     "nuxt-viewport": "^2.6.1",
     "xmlbuilder2": "^4.0.3",
